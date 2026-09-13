@@ -10,3 +10,53 @@
 
 /* Clear actions and concise deployment choices. */
 .mode-icon{width:25px;height:25px;color:#7c60a5;flex-shrink:0}.deploy-heading .deploy-summary{font-size:15px;line-height:1.8}.setup-disclosure{border-bottom:0;margin:10px 0}.setup-disclosure>summary{font-size:14px;padding:10px 0;color:#6a538a}.setup-disclosure .setup-steps{margin:0 0 14px}.source-link{text-decoration:none}.deploy-actions .secondary{margin-top:13px}.device-hint{font-size:13px;text-align:center;margin:8px 0 0}.deployment-card .local-platforms{font-size:13px!important}.deploy-actions .guide-link{padding:12px 0 0;font-size:14px}.deploy-actions .downloads summary{padding:3px 0 0!important}.deploy-actions .install-help summary{font-size:14px;padding:12px 0 0!important}.deploy-facts{padding:15px 17px}.deployment-card{grid-row:span 5}.cost-option{grid-row:span 5}.cost-option dl{grid-row:span 2;margin-bottom:0}.cost-option h3 small{font-size:16px;font-weight:400;color:#7e708d}.costs-section{padding-top:0}.costs-heading h2{margin:0 0 10px}.credit-explainer strong small{font-size:17px}.deploy-footer .deployment-note,.deploy-footer .cost-note{font-size:13px!important;line-height:1.8}.deployment-section{padding-bottom:54px}@media(max-width:800px){.deployment-card,.cost-option{grid-row:auto}.deploy-heading .deploy-summary{font-size:14px}.deployment-section{padding-bottom:36px}}
+
+/* Cloud deployment cost section */
+#cost .cost-options{grid-template-columns:1fr}#cost .cost-option{display:block;grid-row:auto}#cost .cost-option dl{display:block}
+
+/* Local first, cloud underneath; pricing belongs to cloud deployment. */
+#start .deploy-grid{grid-template-columns:1fr;gap:28px}
+#start .deployment-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto auto;grid-row:auto;gap:0 40px}
+#start .deploy-heading{grid-column:1;grid-row:1}
+#start .deploy-facts{grid-column:1;grid-row:2}
+#start .setup-disclosure{grid-column:1;grid-row:3}
+#start .deploy-actions{grid-column:2;grid-row:1 / 4;padding:0}
+#start .deploy-footer{grid-column:1 / -1;grid-row:4;margin-top:18px}
+#cost{scroll-margin-top:24px}
+#start .cloud-fees{grid-column:1 / -1;grid-row:5;border-top:1px solid #e6dfee;margin-top:24px;padding-top:24px}
+#start .cloud-fees .cost-option{padding:0;border:0;border-radius:0;background:transparent}
+#start .cloud-fees .credit-explainer{margin-top:20px}
+@media(max-width:800px){#start .deployment-card{display:block}#start .deploy-actions{margin-top:18px}#start .cloud-fees{margin-top:20px;padding-top:20px}}
+
+/* Cloud is a compact alternative to the primary open-source download. */
+#start .cloud-deploy{background:#f7f4fa;box-shadow:none;align-items:start}
+#start .cloud-deploy .deploy-actions{grid-row:1}
+#start .cloud-deploy h2{font-size:23px}
+.cloud-price-line{font-size:14px;color:#746a7e;margin:18px 0 6px}
+.cloud-billing{border:0;margin-top:4px}
+.cloud-billing summary{font-size:13px;color:#75628c;padding:6px 0}
+.cloud-billing p{font-size:13px;line-height:1.8}
+#start .cloud-deploy .primary{background:#fff;color:#624792;border:1px solid #d9cce8}
+
+#start .cloud-deploy .deploy-actions{grid-row:1;grid-column:2}
+.cloud-offer{margin:20px 0 8px}.cloud-offer p{margin:8px 0;font-size:14px}.cloud-offer strong{font-size:20px;color:#493658}.cloud-offer span{display:block;font-size:12px;color:#817487;margin-top:4px}
+.cloud-step-label{font-size:14px;font-weight:600;color:#51435f;margin:0 0 10px}.cloud-step-two{margin-top:20px}#start .cloud-deploy #nr-add{margin-top:0}
+#start .model-required{grid-column:1 / -1;grid-row:2;margin-top:24px;padding:20px 22px;border:1px solid #d8c9e8;border-radius:12px;background:#fff}
+.model-required>strong{font-size:16px;color:#594078}.model-required p{font-size:14px;margin:9px 0 5px;line-height:1.8}.model-required>span{font-size:12px;color:#807488}
+@media(max-width:800px){#start .model-required{padding:18px}.cloud-offer strong{font-size:19px}}
+
+/* Reduce repeated instructions and nested visual containers. */
+#start .cloud-deploy{gap:0 36px}
+#start .cloud-deploy .cloud-offer{margin:18px 0 4px}
+#start .cloud-deploy .cloud-offer p{font-size:15px;line-height:1.8}
+#start .cloud-deploy .cloud-billing summary{font-size:12px}
+#start .cloud-deploy #nr-add{margin-top:16px}
+#start .cloud-deploy .model-required{border:0;border-top:1px solid #e1d7eb;background:transparent;border-radius:0;padding:16px 0 0;margin-top:20px}
+#start .model-required p{margin:0;font-size:14px;line-height:1.8}
+#start .model-required strong{font-weight:600;color:#594078}
+#start .model-required span{display:inline-block;color:#807488;font-size:12px;margin-left:10px}
+
+#start .cloud-deploy .model-required{border-top:1px solid #d8c9e8;border-left:3px solid #8062a6;padding:14px 0 0 16px}
+#start .model-required .model-required-title{display:block;font-size:19px;font-weight:700;color:#593b7e;margin:0 0 7px}
+#start .model-required p{font-size:14px;color:#655570;margin:0 0 4px}
+#start .model-required .model-fee-note{margin-left:0;font-size:12px;color:#807488}
