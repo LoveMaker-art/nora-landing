@@ -6,12 +6,12 @@
   if (!root || root.dataset.analyticsInitialized) return;
   root.dataset.analyticsInitialized = 'true';
   const events = [
-    ['.launcher-link', 'local_launcher_click'],
-    ['.source-link, footer a[href="https://github.com/LoveMaker-art/noras-tavern"]', 'source_code_click'],
-    ['#nr-download', 'clawchat_download_click'],
-    ['#nr-add', 'cloud_agent_add_click'],
-    ['.downloads a, #nr-download-status a', 'clawchat_manual_download_click'],
-    ['.install-help a, #nr-add-status a', 'agent_share_page_click']
+    ['.launcher-link', '获取本地启动器'],
+    ['.source-link, footer a[href="https://github.com/LoveMaker-art/noras-tavern"]', '查看开源代码'],
+    ['#nr-download', '下载 ClawChat'],
+    ['#nr-add', '添加云端诺拉'],
+    ['.downloads a, #nr-download-status a', '其他平台下载'],
+    ['.install-help a, #nr-add-status a', '打开诺拉分享页']
   ];
   // Capture precedes existing same-tab and app-protocol navigation handlers.
   // Never await analytics, cancel the click or infer successful installation.
