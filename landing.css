@@ -60,3 +60,53 @@
 #start .model-required .model-required-title{display:block;font-size:19px;font-weight:700;color:#593b7e;margin:0 0 7px}
 #start .model-required p{font-size:14px;color:#655570;margin:0 0 4px}
 #start .model-required .model-fee-note{margin-left:0;font-size:12px;color:#807488}
+
+.download-heading{font-size:15px;font-weight:600;color:#51435f;margin:0 0 12px}.installer-list{display:grid;gap:10px}.installer-link{display:flex;justify-content:space-between;align-items:center;gap:16px;text-decoration:none;background:#f4eff9;border:1px solid #d8cbe8;border-radius:12px;padding:13px 17px;color:#533c77}.installer-link:hover{background:#eae1f4;border-color:#8d70b3}.installer-link:focus-visible{outline:3px solid #8062a6;outline-offset:3px}.installer-link b{display:block;font-size:16px}.installer-link small{display:block;margin-top:2px;font-size:12px;color:#766785}.installer-status{font-size:12px;line-height:1.7;color:#7c6c88;margin:10px 0}.installer-help{border:0}.installer-help summary{font-size:13px;color:#695386;padding:6px 0}.installer-help p,.installer-help a{font-size:13px;line-height:1.8}.local-next{border-top:1px solid #e6dfee;padding-top:18px}.local-next>b{font-size:15px;color:#58416f}.local-next p{font-size:13px;line-height:1.8;margin:8px 0 12px}.local-links{display:flex;gap:12px 24px;flex-wrap:wrap}.local-links a{font-size:13px;color:#63488c}.cloud-return-note{font-size:13px;color:#665573;margin:0 0 13px;line-height:1.8}#start .local-links .source-link{margin:0}.installer-link[aria-busy="true"]{opacity:.8}
+
+/* Compact deployment cards: primary choices first, help on demand. */
+#start.compact-deployment .deploy-grid{gap:20px}
+#start.compact-deployment .deployment-card{display:block;padding:26px 30px}
+#start.compact-deployment .card-heading{justify-content:flex-start;gap:12px}
+#start.compact-deployment .card-heading h2{margin:0;font-size:24px}
+#start.compact-deployment .mode-icon{width:23px;height:23px}
+#start.compact-deployment .deploy-summary{margin-top:6px}
+#start.compact-deployment .deploy-actions{margin-top:20px}
+#start.compact-deployment .installer-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+#start.compact-deployment .installer-link{padding:15px 18px}
+#start.compact-deployment .installer-status{margin:8px 0 0;font-size:12px}
+.compact-local-help{display:flex;align-items:start;gap:24px;margin-top:12px;position:relative;flex-wrap:wrap}
+.compact-local-help>.source-link{font-size:13px;padding:6px 0}
+.compact-local-help>.local-help{flex:1;min-width:0}
+#start.compact-deployment details{border:0;margin:0}
+#start.compact-deployment summary{font-size:13px;color:#695386;padding:6px 0}
+#start.compact-deployment .help-content{padding-top:10px}
+#start.compact-deployment .help-content p{font-size:13px;margin:12px 0 8px}
+#start.compact-deployment .setup-steps{margin:0 0 12px;font-size:13px}
+#start.compact-deployment .cloud-deploy{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:12px 32px}
+#start.compact-deployment .cloud-deploy .deploy-heading{grid-column:1;grid-row:1}
+#start.compact-deployment .cloud-deploy .deploy-actions{grid-column:2;grid-row:1;margin:4px 0 0}
+#start.compact-deployment .cloud-offer{margin:12px 0 0}
+#start.compact-deployment .cloud-offer p{margin:0;font-size:14px}
+.cloud-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#start.compact-deployment .cloud-buttons button{margin:0;min-height:50px;padding:12px 14px;font-size:14px;white-space:nowrap}
+#start.compact-deployment .cloud-return-note{font-size:12px;margin:9px 0 0}
+.cloud-help-row{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:0 32px;align-items:start}
+#start.compact-deployment .cloud-help{grid-column:2;grid-row:1}
+#start.compact-deployment .cloud-billing{grid-column:1;grid-row:1}
+#start.compact-deployment .device-hint{text-align:left;margin:0 0 8px}
+#start.compact-deployment .model-required{margin-top:20px;padding:4px 0 4px 17px;background:transparent;border:0;border-left:3px solid #8062a6;border-radius:0}
+#start.compact-deployment .model-required-title{font-size:17px;margin-bottom:4px}
+#start.compact-deployment .model-required p{margin:0;font-size:13px}
+#start.compact-deployment .model-fee-note{font-size:13px;margin-left:6px}
+@media(max-width:800px){
+#start.compact-deployment .deployment-card{padding:23px}
+#start.compact-deployment .installer-list{grid-template-columns:1fr;gap:9px}
+#start.compact-deployment .installer-link{padding:12px 15px}
+#start.compact-deployment .cloud-deploy{display:block}
+#start.compact-deployment .cloud-deploy .deploy-actions{margin-top:18px}
+.cloud-help-row{display:flex;flex-direction:column;gap:3px;margin-top:12px}
+#start.compact-deployment .cloud-buttons button{font-size:13px;padding:11px;gap:6px}
+.compact-local-help{gap:20px}
+#start.compact-deployment .model-fee-note{margin-left:0}
+}
+#start.compact-deployment .cloud-deploy #nr-add{margin-top:0}

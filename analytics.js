@@ -6,7 +6,12 @@
   if (!root || root.dataset.analyticsInitialized) return;
   root.dataset.analyticsInitialized = 'true';
   const events = [
-    ['.launcher-link', '获取本地启动器'],
+    ['[data-installer][data-download-fallback="true"]', '前往 GitHub 选择安装包'],
+    ['[data-installer="windows"]', '下载本地启动器 Windows'],
+    ['[data-installer="mac-arm64"]', '下载本地启动器 Mac Apple 芯片'],
+    ['[data-installer="mac-x64"]', '下载本地启动器 Mac Intel'],
+    ['[data-local-im]', '本地部署下载 ClawChat'],
+    ['[data-pairing]', '查看本地配对指引'],
     ['.source-link, footer a[href="https://github.com/LoveMaker-art/noras-tavern"]', '查看开源代码'],
     ['#nr-download', '下载 ClawChat'],
     ['#nr-add', '添加云端诺拉'],
