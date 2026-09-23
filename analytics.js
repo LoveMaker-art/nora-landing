@@ -13,10 +13,6 @@
     ['[data-local-im]', '本地部署下载 ClawChat'],
     ['[data-pairing]', '查看本地配对指引'],
     ['.source-link, footer a[href="https://github.com/LoveMaker-art/noras-tavern"]', '查看开源代码'],
-    ['#nr-download', '下载 ClawChat'],
-    ['#nr-add', '添加云端诺拉'],
-    ['.downloads a, #nr-download-status a', '其他平台下载'],
-    ['.install-help a, #nr-add-status a', '打开诺拉分享页']
   ];
   // Capture precedes existing same-tab and app-protocol navigation handlers.
   // Never await analytics, cancel the click or infer successful installation.
