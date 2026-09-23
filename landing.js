@@ -4,8 +4,8 @@
   if (!root || root.dataset.initialized) return;
   root.dataset.initialized = 'true';
   const config = window.NoraLandingConfig || {};
-  const code = config.agentCode || 'ff82-d0146078-7e49b915';
-  const shareUrl = 'https://clawling.com/zh/nest/share/?code=' + encodeURIComponent(code);
+  const code = config.agentCode || 'c1bc-e644d310-1cfeb7eb';
+  const shareUrl = 'https://clawling.com/zh/nest/share/' + encodeURIComponent(code);
   const ua = navigator.userAgent || '';
   const platform = /Android/i.test(ua) ? 'android'
     : /iPad|iPhone|iPod/i.test(ua) || (/Mac/i.test(navigator.platform || '') && navigator.maxTouchPoints > 1) ? 'ios'
