@@ -4,7 +4,7 @@
   if (!root || root.dataset.initialized) return;
   root.dataset.initialized = 'true';
   const config = window.NoraLandingConfig || {};
-  const code = config.agentCode || 'c1bc-e644d310-1cfeb7eb';
+  const code = config.agentCode || 'fb24-84e01bec-1eb1b680';
   const shareUrl = 'https://clawling.com/zh/nest/share/' + encodeURIComponent(code);
   const ua = navigator.userAgent || '';
   const platform = /Android/i.test(ua) ? 'android'
