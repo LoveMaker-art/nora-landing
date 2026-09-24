@@ -27,7 +27,7 @@
     const timeout = setTimeout(() => controller.abort(), 6000);
     try {
       const response = await fetch(`https://api.github.com/repos/${repo}/${path}`, { signal: controller.signal });
-      if (!response.ok) throw new Error(`GitHub ${response.status}`);
+      if (!response.ok) throw new Error('http_error');
       return await response.json();
     } finally { clearTimeout(timeout); }
   }
@@ -38,21 +38,25 @@
     // history for the most recently published complete three-platform bundle.
     if (!result) {
       const releases = await request('releases?per_page=100');
+      if (!Array.isArray(releases)) throw new Error('invalid_response');
       result = releases.filter(r => !r.draft && !r.prerelease)
         .sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at))
         .map(select).find(Boolean);
     }
-    if (!result) throw new Error('No complete installer release found');
+    if (!result) throw new Error('no_complete_release');
     for (const [platform, asset] of Object.entries(result.assets)) {
       const link = document.querySelector(`[data-installer="${platform}"]`);
       link.href = asset.url;
       delete link.dataset.downloadFallback;
     }
     document.getElementById('installer-release').href = `${base}tag/${result.tag}`;
+    window.dispatchEvent(new CustomEvent('nora:installer-result', {detail:{result: result.tag === latest.tag_name ? 'latest' : 'previous_complete'}}));
     status.textContent = '已获取最新完整安装包，选择系统即可下载。' +
       (result.tag !== latest.tag_name ? '安装后请在启动器检查组件更新。' : '');
   }
-  resolve().catch(() => {
+  resolve().catch(error => {
+    const result = error.name === 'AbortError' ? 'timeout' : ['http_error','no_complete_release','invalid_response'].includes(error.message) ? error.message : 'network_error';
+    window.dispatchEvent(new CustomEvent('nora:installer-result', {detail:{result}}));
     // Never fall back to a pinned old installer.
     status.textContent = '暂时无法获取安装包。三个下载入口将前往 GitHub 发布页，请在那里选择安装包。';
     document.querySelectorAll('[data-installer]').forEach(link => {

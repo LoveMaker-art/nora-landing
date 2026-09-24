@@ -1,0 +1,34 @@
+{
+  "name": "nora-landing",
+  "main": "server/worker.mjs",
+  "compatibility_date": "2026-09-24",
+  "build": {
+    "command": "node scripts/build.mjs"
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nora-landing-analytics",
+      "database_id": "b0693d06-171d-4e2f-b4c8-f55fe39ef21a",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "account_id": "6d46e7c054a6a8259f7f4f7c1a407f19",
+  "ratelimits": [
+    {
+      "name": "EVENT_RATE_LIMITER",
+      "namespace_id": "942601",
+      "simple": {
+        "limit": 300,
+        "period": 60
+      }
+    }
+  ]
+}

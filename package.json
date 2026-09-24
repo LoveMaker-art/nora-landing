@@ -1,0 +1,1 @@
+{"name":"nora-landing","private":true,"type":"module","scripts":{"build":"node scripts/build.mjs","test":"node --test tests/*.test.mjs","dev":"npm run build && wrangler dev","deploy":"npm run build && wrangler deploy"},"devDependencies":{"wrangler":"4.137.0"}}
