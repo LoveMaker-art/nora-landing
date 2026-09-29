@@ -1,3 +1,4 @@
+import {download,refreshInstallers} from './downloads.mjs';
 const ORIGINS = new Set(['https://noratavern.com', 'https://lovemaker-art.github.io']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED = {
@@ -60,9 +61,10 @@ async function stats(request,env) {
  for(let n=start;n<end;n+=DAY){const date=new Date(n+8*3600000).toISOString().slice(0,10);filled.push(days.get(date)||{date,pv:0,uv:0,download_clicks:0,download_visitors:0});}
  return json({schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:new Date().toISOString(),identity:'anonymous_browser_per_origin',summary:summary.results[0],daily:filled,events:events.results,actions:actions.results,unavailable:{create_click_visitors:{value:null,status:'entry_removed'},create_success_users:{value:null,status:'not_integrated'},install_success_devices:{value:null,status:'not_integrated'}}});
 }
-export default {async fetch(request,env) {
+export default {async scheduled(event,env,ctx) {ctx.waitUntil(refreshInstallers(env));}, async fetch(request,env,ctx) {
  const url=new URL(request.url);if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
  try {
+  if(url.pathname.startsWith('/api/download/'))return await download(request,env,ctx);
   if(url.pathname==='/api/events'&&request.method==='OPTIONS') {const origin=request.headers.get('Origin');return ORIGINS.has(origin)?new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin,'Vary':'Origin','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Max-Age':'3600'}}):json({error:'origin_not_allowed'},403);}
   if(url.pathname==='/api/events'&&request.method==='POST')return await collect(request,env);
   if(url.pathname==='/api/stats'&&request.method==='GET')return await stats(request,env);
