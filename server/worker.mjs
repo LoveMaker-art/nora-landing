@@ -1,4 +1,5 @@
 import {download,refreshInstallers} from './downloads.mjs';
+import {collectLauncher,launcherStats} from './launcher.mjs';
 const ORIGINS = new Set(['https://noratavern.com', 'https://lovemaker-art.github.io']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED = {
@@ -85,6 +86,11 @@ async function stats(request,env) {
 export default {async scheduled(event,env,ctx) {ctx.waitUntil(refreshInstallers(env));}, async fetch(request,env,ctx) {
  const url=new URL(request.url);if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
  try {
+  if(url.pathname==='/api/launcher/events'&&request.method==='POST')return await collectLauncher(request,env,visitorHash);
+  if(url.pathname==='/api/launcher/stats'&&request.method==='GET') {
+   if(!env.STATS_READ_KEY||!await secretMatches(request.headers.get('Authorization'),`Bearer ${env.STATS_READ_KEY}`))return json({error:'unauthorized'},401);
+   return await launcherStats(request,env);
+  }
   if(url.pathname.startsWith('/api/download/'))return await download(request,env,ctx);
   if(url.pathname==='/api/events'&&request.method==='OPTIONS') {const origin=request.headers.get('Origin');return ORIGINS.has(origin)?new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin,'Vary':'Origin','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Max-Age':'3600'}}):json({error:'origin_not_allowed'},403);}
   if(url.pathname==='/api/events'&&request.method==='POST')return await collect(request,env);

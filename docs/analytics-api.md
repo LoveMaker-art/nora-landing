@@ -150,3 +150,49 @@ print(data['summary'])
 看板应将 `download_clicks` 标注为“原始点击”，`download_ready_requests` 标注为“有效下载请求”。不合并、不改写旧点击记录，不从 direct/fallback 推断下载完成。不同事件可能跨日或因补报暂时不齐，不能直接把时间段内总量相除称作完整漏斗。
 
 此次没有接入启动器和安装结果，也没有改变安装包选择、备用逻辑、版本或页面样式。
+
+## 启动器统计 v1（服务端已部署，启动器尚未发布）
+
+与上述网站统计分开，新表为 `launcher_events`，迁移文件 `0005_launcher_events.sql`。旧 `/api/events` 和 `/api/stats` 保持原契约，网站接口中的 `not_integrated` 不改写成安装数据。不能将浏览器访客与启动器安装标识强行关联。
+
+### 采集
+
+`POST /api/launcher/events` 接收 `{ "events": [...] }`。字段、事件、阶段和错误码白名单见 `server/launcher-contract.json`，与启动器 `telemetry-contract.json` 保持一致。
+
+- 每批1至20条，最大64 KiB，事件时间最多回溯7天，容忍客户端快5分钟。拒绝未知字段、自由文本及任意错误码。
+- 随机安装 UUID 经带域分隔的 HMAC 后入库；不保存原始 IP、安装 UUID、请求头、路径或日志。Cloudflare 的基础设施访问日志不属于此表。
+- 接口公开，不携带查询密钥。每个 IP 每分钟最多60次请求，防滥用但不能证明客户端真实，不能用于结算。统计停收开关 `LAUNCHER_TELEMETRY_PAUSED=true` 返回 `paused`，客户端暂停一小时。
+- 202 返回 `accepted_event_ids` 和 `rejected_event_ids`。重复上报不重复写入；`invalid_event`、`identity_conflict` 为单条永久拒绝。429 含 `Retry-After: 60`；503 不能当作成功接收或零数据。
+
+### 监控查询
+
+`GET /api/launcher/stats?from=2026-09-30&to=2026-09-30`
+
+必须使用现有 `Authorization: Bearer <STATS_READ_KEY>`。密钥只能放受信任的查询端，不能打进启动器或公开静态页面。日期按上海时间解释，最长93天。可筛选 `platform=win32|darwin|linux`、`launcher_version`、`product_version`。
+
+返回：
+
+- `summary`：首次观察的新安装环境数、安装完成环境数、首次实际运行就绪环境数、失败操作数。全部是所选时间段的事件计数，不是同一批用户的严格转化漏斗。
+- `failures`：按操作、失败阶段、错误分类、平台、启动器版本聚合的失败数，前100组。
+- `durations`：成功阶段样本数、平均及最大耗时。一次操作可多次进入下载/校验阶段，不等于操作总耗时或P95。
+- `current`：每个安装环境已收到的最新序号事件，最多200项；`current_truncated` 提示截断。范围外有更新事件的环境不会回显较早状态。并非在线人数。
+- `monitor_state`：`idle`、`running`、`slow`、`possibly_stalled`、`contact_lost`、`waiting_for_user`，或客户端终态。等待状态表示最后停留在配置步骤，不表示用户现在在线。`handoff` 只是启动器替换交接，不是更新完成。
+
+追加 `&operation_id=<日志中的操作UUID>` 查询单次操作时间线；可额外限定 `installation_id=<查询返回的HMAC标识>`。每页500条，用 `next_offset` 继续。时间线按操作编号取全部事件，不受日期和版本筛选限制；日期参数仍需合法。
+
+可视化监控尚未接入，以上为看板数据契约。需先确认现有管理看板入口，不能将受保护的查询功能误做成公开页面。原始事件保留期限待确认，本次没有自动删除任务；应在上线前明确容量与保留策略。
+
+### 上线顺序
+
+1. 备份现有 D1，应用0005迁移，仅新增表和索引，不重建网站统计表。
+2. 部署 Worker；复用 `VISITOR_HASH_SECRET` 和 `STATS_READ_KEY`，验证未授权查询401、重试去重、停收及限流。
+3. 发布已完成三平台实机验收的启动器。旧启动器不会自动产生这些事件，历史不可回补。
+4. 联调管理看板。
+
+### 2026-09-30 部署记录
+
+- 已备份生产 D1，并成功应用 `0005_launcher_events.sql`。备份保存在操作人员本机，不提交仓库。
+- 已部署 Worker 版本 `4a8b483d-0233-4437-83d2-b814570d5f65`；上一个可回退版本为 `3c5ae6d4-50e1-433d-929b-d56c466f7dbc`。静态资源没有变化。
+- 实际请求 `https://noratavern.com/api/launcher/events` 两次返回202，D1核查仅一条记录，安装标识为64位HMAC；验收记录已定向删除并核查为零。
+- 首页返回200，新旧查询接口未授权均返回401。现有网站统计表仍可查询，未修改其数据。
+- 持查询密钥的线上查询尚待验收，未取得密钥也未轮换现有密钥。启动器未打包、替换或发布，可视化看板未接入；不能将服务端上线理解为用户启动器已经开始上报。

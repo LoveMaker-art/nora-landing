@@ -23,6 +23,11 @@
   "account_id": "6d46e7c054a6a8259f7f4f7c1a407f19",
   "ratelimits": [
     {
+      "name": "LAUNCHER_RATE_LIMITER",
+      "namespace_id": "942602",
+      "simple": {"limit": 60, "period": 60}
+    },
+    {
       "name": "EVENT_RATE_LIMITER",
       "namespace_id": "942601",
       "simple": {
