@@ -18,7 +18,7 @@ function release(tag='v2.3.18',platform='windows') {const suffix={windows:'win-x
 const req=(q='')=>new Request('https://noratavern.com/api/download/windows'+q,{headers:{Origin:'https://lovemaker-art.github.io'}});
 test('initial button targets remain usable without waiting for browser JS',()=>{
  const html=readFileSync('index.html','utf8');for(const p of Object.keys(seed))assert.ok(html.includes(`data-installer="${p}" href="https://noratavern.com/api/download/${p}"`));
- assert.ok(html.includes('id="installer-retry"'));assert.ok(!html.includes('GitHub 备用下载入口'));
+ assert.ok(!html.includes('id="installer-retry"'));assert.ok(!html.includes('GitHub 备用下载入口'));
 });
 test('fresh cached address responds immediately without GitHub request',async()=>{
  const env=database(),url=put(env);let calls=0;

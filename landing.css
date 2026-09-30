@@ -111,10 +111,6 @@
 }
 #start.compact-deployment .cloud-deploy #nr-add{margin-top:0}
 
-/* Download preparation and retry keep the existing purple card styling. */
-.installer-link[aria-disabled="true"]{opacity:.65;cursor:wait}
-.installer-retry{font:inherit;color:#665096;background:transparent;border:1px solid #d9ccea;border-radius:10px;padding:8px 14px;cursor:pointer}
-.installer-retry:hover{background:#f0eaf8}
-.installer-retry:focus-visible{outline:2px solid #665096;outline-offset:3px}
-.installer-retry:disabled{opacity:.55;cursor:wait}
-.installer-retry[hidden]{display:none}
+/* Feedback stays in one text line; platform cards keep their original appearance. */
+.installer-link[aria-disabled="true"]{cursor:wait}
+#start.compact-deployment .installer-status{min-height:3.4em;max-width:100%;text-align:left}
