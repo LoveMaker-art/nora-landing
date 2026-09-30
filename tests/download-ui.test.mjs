@@ -6,10 +6,10 @@ function element(extra={}) {return {hidden:false,disabled:false,textContent:'',d
 function harness(fetcher){
  const status=element(),frame=element(),requests=[];
  const links=['windows','mac-arm64','mac-x64'].map(p=>element({detail:element({textContent:'安装包格式'}),querySelector(){return this.detail;},lastElementChild:element(),dataset:{installer:p},href:`https://noratavern.com/api/download/${p}`}));
- const timers=[];
- const context={document:{getElementById:()=>status,querySelectorAll:()=>links,createElement:()=>frame,body:{append(){}}},URL,AbortSignal,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},fetch:async u=>{requests.push(u);return fetcher(u);}};
+ const timers=[],events=[];
+ const context={crypto,CustomEvent:class {constructor(type,opts){this.type=type;this.detail=opts.detail;}},window:{dispatchEvent(e){events.push(e.detail);}},document:{getElementById:()=>status,querySelectorAll:()=>links,createElement:()=>frame,body:{append(){}}},URL,AbortSignal,setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){},fetch:async u=>{requests.push(u);return fetcher(u);}};
  vm.runInNewContext(readFileSync('installers.js','utf8'),context);
- return {status,frame,links,requests,timers,click(p='windows'){let prevented=false;links.find(l=>l.dataset.installer===p).listeners.click({preventDefault(){prevented=true;}});assert.ok(prevented);}};
+ return {status,frame,links,requests,timers,events,click(p='windows'){let prevented=false;links.find(l=>l.dataset.installer===p).listeners.click({preventDefault(){prevented=true;}});assert.ok(prevented);}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 const file='https://github.com/LoveMaker-art/noras-tavern/releases/download/v2.3.15/Nora-Tavern-Launcher-1.1.2-win-x64-setup.exe';
@@ -34,4 +34,11 @@ test('failed card retries in place and recovers original appearance after succes
 });
 test('invalid file result never navigates to a release page',async()=>{
  const h=harness(async()=>Response.json({url:'https://github.com/LoveMaker-art/noras-tavern/releases/tag/v2.3.17'}));h.click();await settle();assert.match(h.status.textContent,/暂时无法/);assert.equal(h.frame.src,undefined);
+});
+
+test('only actual requests produce one outcome; busy and cooldown clicks produce none',async()=>{
+ let finish;const h=harness(()=>new Promise(r=>{finish=r;}));h.click();h.click();assert.equal(h.requests.length,1);
+ finish(Response.json({url:file}));await settle();assert.equal(h.events.length,1);assert.equal(h.events[0].event,'download_ready');
+ const fail=harness(async()=>Response.json({error:'check_cooldown',retryAfter:2},{status:429}));fail.click();await settle();fail.click();
+ assert.equal(fail.events.length,1);assert.equal(fail.events[0].event,'download_failed');assert.equal(fail.events[0].result,'rate_limited');
 });

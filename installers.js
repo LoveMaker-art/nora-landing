@@ -25,6 +25,7 @@
   controls();
   if(card.remaining>0)setTimeout(()=>{card.remaining--;countdown(card);},1000);
  }
+ function report(event,platform,result){try{window.dispatchEvent(new CustomEvent('nora:download-outcome',{detail:{event,platform,result}}));}catch{}}
  async function start(platform){
   const card=cards.get(platform);if(busy||card.remaining>0)return;
   selected=card;const force=card.attempted;card.attempted=true;busy=true;render(card,'pending');controls();
@@ -33,13 +34,15 @@
    const u=new URL(card.link.href);u.searchParams.set('format','json');if(force)u.searchParams.set('retry','1');
    const response=await fetch(u.href,{signal:AbortSignal.timeout(25000),cache:'no-store',credentials:'omit'});
    const data=await response.json();
-   if(!response.ok){const e=new Error(data.error);e.retryAfter=data.retryAfter;throw e;}
+   if(!response.ok){const e=new Error(data.error);e.status=response.status;e.retryAfter=data.retryAfter;throw e;}
    const target=new URL(data.url);
    const suffix={windows:'-win-x64-setup.exe','mac-arm64':'-mac-arm64.dmg','mac-x64':'-mac-x64.dmg'}[platform];
    if(target.origin!=='https://github.com'||!target.pathname.startsWith('/LoveMaker-art/noras-tavern/releases/download/')||!target.pathname.endsWith(suffix))throw new Error('invalid_download');
-   frame.src=target.href;render(card,'idle');
+   frame.src=target.href;report('download_ready',platform,'ready');render(card,'idle');
    say(`已发起 ${names[platform]} 下载，请查看浏览器下载列表。`);
   }catch(error){
+   const reason=error.status===429?'rate_limited':error.status?'http_error':error.name==='TimeoutError'||error.name==='AbortError'?'timeout':error.message==='invalid_download'||error instanceof SyntaxError?'invalid_response':'network_error';
+   report('download_failed',platform,reason);
    card.remaining=Math.min(30,Math.max(0,Math.ceil(Number(error.retryAfter)||0)));
    render(card,'idle');countdown(card);
   }finally{busy=false;controls();}

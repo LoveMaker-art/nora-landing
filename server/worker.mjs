@@ -3,6 +3,8 @@ const ORIGINS = new Set(['https://noratavern.com', 'https://lovemaker-art.github
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED = {
  download_click: ['windows','mac-arm64','mac-x64'],
+ download_ready: ['windows','mac-arm64','mac-x64'],
+ download_failed: ['windows','mac-arm64','mac-x64'],
  help_open: ['installation','faq-relationship','faq-next','faq-failure'],
  link_click: ['clawchat','pairing','install-guide','github-fallback','source'],
  installer_resolve: ['installers']
@@ -17,9 +19,12 @@ async function readBody(request) {if(!request.body)throw new Error('body');const
 function validEvent(b,origin) {
  if(!b||typeof b.event_id!=='string'||typeof b.visitor_id!=='string'||!UUID.test(b.event_id)||!UUID.test(b.visitor_id)||!ORIGINS.has(origin))return false;
  if(b.hostname!==new URL(origin).hostname)return false;
+ if(b.occurred_at!==undefined&&(!Number.isSafeInteger(b.occurred_at)||b.occurred_at<Date.now()-7*DAY||b.occurred_at>Date.now()+5*60000))return false;
+ if(b.event==='download_ready'&&(b.platform!==b.action||b.result!=='ready'))return false;
+ if(b.event==='download_failed'&&(b.platform!==b.action||!['rate_limited','http_error','timeout','invalid_response','network_error'].includes(b.result)))return false;
  if(b.event==='pageview'){if(b.action||b.platform||b.result)return false;}
  else if(!Array.isArray(ALLOWED[b.event])||!ALLOWED[b.event].includes(b.action))return false;
- if(b.event==='download_click' && (b.platform!==b.action || !['direct','fallback'].includes(b.result)))return false;
+ if(b.event==='download_click' && (b.platform!==b.action || !['click','direct','fallback'].includes(b.result)))return false;
  if(['help_open','link_click'].includes(b.event) && (b.platform||b.result))return false;
  if(b.event==='installer_resolve' && b.platform)return false;
  if(b.event==='installer_resolve' && !['latest','previous_complete','http_error','timeout','network_error','no_complete_release','invalid_response'].includes(b.result))return false;
@@ -38,28 +43,44 @@ async function collect(request,env) {
  if(!validEvent(b,origin))return json({error:'invalid_event'},400,cors);
  // Only a fixed, low-cardinality set of fields is persisted. No raw URLs, IPs or keys.
  const id=await visitorHash(b.visitor_id,env.VISITOR_HASH_SECRET);
- await env.DB.prepare('INSERT OR IGNORE INTO events(event_id,visitor_id,occurred_at,event,action,platform,result,channel,device,hostname) VALUES(?,?,?,?,?,?,?,?,?,?)')
- .bind(b.event_id,id,Date.now(),b.event,b.action||'',b.platform||'',b.result||'',b.channel,b.device,b.hostname).run();
+ await env.DB.prepare('INSERT OR IGNORE INTO events(event_id,visitor_id,occurred_at,event,action,platform,result,channel,device,hostname,received_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+ .bind(b.event_id,id,Math.min(b.occurred_at??Date.now(),Date.now()),b.event,b.action||'',b.platform||'',b.result||'',b.channel,b.device,b.hostname,Date.now()).run();
  return json({accepted:true},202,cors);
 }
 async function stats(request,env) {
  if(!env.STATS_READ_KEY||!await secretMatches(request.headers.get('Authorization'),`Bearer ${env.STATS_READ_KEY}`))return json({error:'unauthorized'},401);
  if(!env.DB)return json({error:'not_configured'},503);
  const u=new URL(request.url),from=u.searchParams.get('from')||'',to=u.searchParams.get('to')||'';
+ const view=u.searchParams.get('view');
+ if(view&&view!=='dashboard')return json({error:'invalid_view'},400);
  const start=dateMs(from),end=dateMs(to)+DAY;
  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start||end-start>93*DAY)return json({error:'invalid_range',message:'Use from/to YYYY-MM-DD, inclusive, at most 93 days (Asia/Shanghai).'},400);
  const bindings=[start,end];let where='occurred_at >= ? AND occurred_at < ?';
  for(const key of ['channel','hostname']) {const value=u.searchParams.get(key);if(value){if(!/^[a-zA-Z0-9_.-]{1,80}$/.test(value))return json({error:'invalid_filter'},400);where+=` AND ${key} = ?`;bindings.push(value);}}
  const q=sql=>env.DB.prepare(sql).bind(...bindings);
  const [summary,daily,events,actions]=await env.DB.batch([
- q(`SELECT COUNT(CASE WHEN event='pageview' THEN 1 END) AS pv, COUNT(DISTINCT CASE WHEN event='pageview' THEN visitor_id END) AS uv, COUNT(CASE WHEN event='download_click' THEN 1 END) AS download_clicks, COUNT(DISTINCT CASE WHEN event='download_click' THEN visitor_id END) AS download_visitors FROM events WHERE ${where}`),
- q(`SELECT date(occurred_at/1000,'unixepoch','+8 hours') AS date, COUNT(CASE WHEN event='pageview' THEN 1 END) AS pv, COUNT(DISTINCT CASE WHEN event='pageview' THEN visitor_id END) AS uv, COUNT(CASE WHEN event='download_click' THEN 1 END) AS download_clicks, COUNT(DISTINCT CASE WHEN event='download_click' THEN visitor_id END) AS download_visitors FROM events WHERE ${where} GROUP BY date ORDER BY date`),
+ q(`SELECT COUNT(CASE WHEN event='pageview' THEN 1 END) AS pv, COUNT(DISTINCT CASE WHEN event='pageview' THEN visitor_id END) AS uv, COUNT(CASE WHEN event='download_click' THEN 1 END) AS download_clicks, COUNT(DISTINCT CASE WHEN event='download_click' THEN visitor_id END) AS download_visitors, COUNT(CASE WHEN event='download_ready' THEN 1 END) AS download_ready_requests, COUNT(DISTINCT CASE WHEN event='download_ready' THEN visitor_id END) AS download_ready_visitors, COUNT(CASE WHEN event='download_failed' THEN 1 END) AS download_failed_requests FROM events WHERE ${where}`),
+ q(`SELECT date(occurred_at/1000,'unixepoch','+8 hours') AS date, COUNT(CASE WHEN event='pageview' THEN 1 END) AS pv, COUNT(DISTINCT CASE WHEN event='pageview' THEN visitor_id END) AS uv, COUNT(CASE WHEN event='download_click' THEN 1 END) AS download_clicks, COUNT(DISTINCT CASE WHEN event='download_click' THEN visitor_id END) AS download_visitors, COUNT(CASE WHEN event='download_ready' THEN 1 END) AS download_ready_requests, COUNT(DISTINCT CASE WHEN event='download_ready' THEN visitor_id END) AS download_ready_visitors, COUNT(CASE WHEN event='download_failed' THEN 1 END) AS download_failed_requests FROM events WHERE ${where} GROUP BY date ORDER BY date`),
  q(`SELECT event,action,platform,result,COUNT(*) AS count,COUNT(DISTINCT visitor_id) AS visitors FROM events WHERE ${where} GROUP BY event,action,platform,result ORDER BY event,action,platform,result`),
  q(`SELECT event,action,platform,COUNT(*) AS count,COUNT(DISTINCT visitor_id) AS visitors FROM events WHERE ${where} GROUP BY event,action,platform ORDER BY event,action,platform`)
  ]);
  const days=new Map(daily.results.map(r=>[r.date,r]));const filled=[];
- for(let n=start;n<end;n+=DAY){const date=new Date(n+8*3600000).toISOString().slice(0,10);filled.push(days.get(date)||{date,pv:0,uv:0,download_clicks:0,download_visitors:0});}
- return json({schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:new Date().toISOString(),identity:'anonymous_browser_per_origin',summary:summary.results[0],daily:filled,events:events.results,actions:actions.results,unavailable:{create_click_visitors:{value:null,status:'entry_removed'},create_success_users:{value:null,status:'not_integrated'},install_success_devices:{value:null,status:'not_integrated'}}});
+ for(let n=start;n<end;n+=DAY){const date=new Date(n+8*3600000).toISOString().slice(0,10);filled.push(days.get(date)||{date,pv:0,uv:0,download_clicks:0,download_visitors:0,download_ready_requests:0,download_ready_visitors:0,download_failed_requests:0});}
+ // Project the same aggregates into a small dashboard contract; no extra event collection.
+ if(view==='dashboard'){
+  const primary=r=>({pv:r.pv,uv:r.uv,download_click_visitors:r.download_visitors,download_ready_visitors:r.download_ready_visitors});
+  const platforms=['windows','mac-arm64','mac-x64'].map(platform=>{
+   const find=event=>actions.results.find(r=>r.event===event&&r.platform===platform);
+   return {platform,download_click_visitors:find('download_click')?.visitors||0,download_ready_visitors:find('download_ready')?.visitors||0};
+  });
+  return json({schema_version:2,timezone:'Asia/Shanghai',from,to,generated_at:new Date().toISOString(),
+   identity:'anonymous_browser_per_origin',measurement:{download_ready:'browser_received_valid_installer_url_not_file_completion',history:'new_outcomes_not_backfilled'},
+   summary:primary(summary.results[0]),daily:filled.map(r=>({date:r.date,...primary(r)})),platforms,
+   diagnostics:{raw_download_clicks:summary.results[0].download_clicks,ready_requests:summary.results[0].download_ready_requests,
+    failed_requests:summary.results[0].download_failed_requests,
+    failures:events.results.filter(r=>r.event==='download_failed').map(r=>({platform:r.platform,reason:r.result,count:r.count,visitors:r.visitors}))}});
+ }
+ return json({schema_version:2,timezone:'Asia/Shanghai',from,to,generated_at:new Date().toISOString(),identity:'anonymous_browser_per_origin',measurement:{download_ready:'browser_received_valid_installer_url_not_file_completion',history:'new_outcomes_not_backfilled',timestamp:'client_event_time_when_supplied_otherwise_receipt_time'},summary:summary.results[0],daily:filled,events:events.results,actions:actions.results,unavailable:{create_click_visitors:{value:null,status:'entry_removed'},create_success_users:{value:null,status:'not_integrated'},install_success_devices:{value:null,status:'not_integrated'}}});
 }
 export default {async scheduled(event,env,ctx) {ctx.waitUntil(refreshInstallers(env));}, async fetch(request,env,ctx) {
  const url=new URL(request.url);if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
