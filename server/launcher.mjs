@@ -1,3 +1,4 @@
+import {launcherFunnel} from './launcher-funnel.mjs';
 import contract from './launcher-contract.json' with { type: 'json' };
 
 function validFaultPacket(value) {
@@ -131,8 +132,28 @@ export async function launcherStats(request, env) {
   if (key === 'platform' ? !contract.platforms.includes(value) : !VERSION.test(value)) return json({error:'invalid_filter'},400);
   where += ` AND ${key}=?`; values.push(value);
  }
+ if(params.has('view')){
+  if(params.get('view')==='funnel'){
+   const result=await launcherFunnel(env,params,{start,end,from,to});
+   return result.error?json({error:result.error,message:result.message},result.status):json(result.data);
+  }
+  if(params.get('view')!=='errors')return json({error:'invalid_view'},400);
+ }
  const project = row => ({...row,fault:row.fault ? JSON.parse(row.fault) : null});
  const query = (sql, bindings = values) => env.DB.prepare(sql).bind(...bindings).all();
+ if(params.get('view')==='errors'){
+  if(['operation_id','installation_id','offset','window_days'].some(key=>params.has(key)))return json({error:'incompatible_filters'},400);
+  const raw=params.get('cursor') ?? '0',cursor=Number(raw);
+  if(!/^\d+$/.test(raw)||!integer(cursor,Number.MAX_SAFE_INTEGER))return json({error:'invalid_cursor'},400);
+  // Intake order keeps late client events and concurrent inserts behind the saved cursor.
+  const rows=await query(`SELECT e.*,e.rowid AS intake_cursor,
+   (SELECT status FROM launcher_events final WHERE final.installation_id=e.installation_id AND final.operation_id=e.operation_id AND final.event='operation_finished' ORDER BY final.sequence DESC LIMIT 1) AS operation_outcome
+   FROM launcher_events e WHERE ${where} AND e.rowid>? AND (event='launcher_error' OR (event='operation_finished' AND status='failed')) ORDER BY e.rowid LIMIT 101`,[...values,cursor]);
+  const page=rows.results.slice(0,100);
+  return json({schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:Date.now(),
+   errors:page.map(({intake_cursor,...row})=>project(row)),has_more:rows.results.length>100,next_cursor:page.at(-1)?.intake_cursor ?? cursor});
+ }
+ if(params.has('cursor'))return json({error:'incompatible_filters'},400);
  if (params.has('operation_id')) {
   const operation = params.get('operation_id'), installation = params.get('installation_id') || '';
   if (!UUID.test(operation) || (installation && !/^[a-f0-9]{64}$/.test(installation))) return json({error:'invalid_task'},400);
@@ -145,15 +166,15 @@ export async function launcherStats(request, env) {
  COUNT(DISTINCT CASE WHEN event='operation_finished' AND action='install' AND status='succeeded' AND cohort='new' THEN installation_id END) AS completed_installations,
  COUNT(DISTINCT CASE WHEN event='runtime_first_ready' AND cohort='new' THEN installation_id END) AS first_ready_installations,
  COUNT(DISTINCT CASE WHEN event='operation_finished' AND status='failed' THEN installation_id||operation_id END) AS failed_operations FROM launcher_events WHERE ${where}`);
- const failures = await query(`SELECT action,stage,error_code,error_source,error_site,system_code,http_status,exit_code,exit_signal,error_kind,platform,launcher_version,COUNT(DISTINCT installation_id||operation_id) AS count FROM launcher_events WHERE ${where} AND event='operation_finished' AND status='failed' GROUP BY action,stage,error_code,error_source,error_site,system_code,http_status,exit_code,exit_signal,error_kind,platform,launcher_version ORDER BY count DESC LIMIT 100`);
- const errors = await query(`SELECT e.*, (SELECT status FROM launcher_events final WHERE final.installation_id=e.installation_id AND final.operation_id=e.operation_id AND final.event='operation_finished' ORDER BY final.sequence DESC LIMIT 1) AS operation_outcome FROM launcher_events e WHERE ${where} AND (event='launcher_error' OR (event='operation_finished' AND status='failed')) ORDER BY received_at DESC LIMIT 100`);
+ const failures = await query(`SELECT action,stage,error_code,error_source,error_site,system_code,http_status,exit_code,exit_signal,error_kind,platform,launcher_version,COUNT(DISTINCT installation_id||operation_id) AS count FROM launcher_events WHERE ${where} AND event='operation_finished' AND status='failed' GROUP BY action,stage,error_code,error_source,error_site,system_code,http_status,exit_code,exit_signal,error_kind,platform,launcher_version ORDER BY count DESC LIMIT 101`);
+ const errors = await query(`SELECT e.*, (SELECT status FROM launcher_events final WHERE final.installation_id=e.installation_id AND final.operation_id=e.operation_id AND final.event='operation_finished' ORDER BY final.sequence DESC LIMIT 1) AS operation_outcome FROM launcher_events e WHERE ${where} AND (event='launcher_error' OR (event='operation_finished' AND status='failed')) ORDER BY received_at DESC,event_id DESC LIMIT 101`);
  const durations = await query(`SELECT stage,COUNT(*) AS samples,AVG(stage_elapsed_ms) AS mean_ms,MAX(stage_elapsed_ms) AS max_ms FROM launcher_events WHERE ${where} AND event='stage_finished' AND status='succeeded' GROUP BY stage`);
  // Error evidence is not an operation outcome: a retry must not replace task state.
  // Select the latest state sequence before filtering; delayed packets cannot reopen a finished task.
  const latest = await query(`SELECT * FROM launcher_events e WHERE ${where} AND e.event<>'launcher_error' AND e.action NOT IN ('list_models','check_update') AND NOT EXISTS (SELECT 1 FROM launcher_events newer WHERE newer.installation_id=e.installation_id AND newer.event<>'launcher_error' AND newer.action NOT IN ('list_models','check_update') AND newer.sequence>e.sequence) ORDER BY received_at DESC LIMIT 201`);
  const operations = await query(`SELECT * FROM launcher_events e WHERE ${where} AND e.operation_id<>'' AND e.event<>'launcher_error' AND NOT EXISTS (SELECT 1 FROM launcher_events newer WHERE newer.installation_id=e.installation_id AND newer.operation_id=e.operation_id AND newer.event<>'launcher_error' AND newer.sequence>e.sequence) ORDER BY received_at DESC LIMIT 201`);
- const issues = await query(`SELECT json_extract(fault,'$.fingerprint') AS fingerprint, COUNT(DISTINCT installation_id||operation_id) AS operations, COUNT(DISTINCT installation_id) AS environments, MAX(occurred_at) AS last_seen FROM launcher_events WHERE ${where} AND fault IS NOT NULL GROUP BY json_extract(fault,'$.fingerprint') ORDER BY last_seen DESC LIMIT 100`);
+ const issues = await query(`SELECT json_extract(fault,'$.fingerprint') AS fingerprint, COUNT(DISTINCT installation_id||operation_id) AS operations, COUNT(DISTINCT installation_id) AS environments, MAX(occurred_at) AS last_seen FROM launcher_events WHERE ${where} AND fault IS NOT NULL GROUP BY json_extract(fault,'$.fingerprint') ORDER BY last_seen DESC LIMIT 101`);
  return json({schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:Date.now(),measurement:'client_reported_installation_environments_not_people',
-  summary:summary.results[0],failures:failures.results,errors:errors.results.map(project),issues:issues.results,operations:operations.results.slice(0,200).map(project),operations_truncated:operations.results.length>200,durations:durations.results,
+  summary:summary.results[0],failures:failures.results.slice(0,100),failures_truncated:failures.results.length>100,errors:errors.results.slice(0,100).map(project),errors_truncated:errors.results.length>100,issues:issues.results.slice(0,100),issues_truncated:issues.results.length>100,operations:operations.results.slice(0,200).map(project),operations_truncated:operations.results.length>200,durations:durations.results,
   current:latest.results.slice(0,200).map(row => ({...project(row),monitor_state:monitorState(row)})),current_truncated:latest.results.length>200});
 }

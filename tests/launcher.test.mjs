@@ -91,10 +91,49 @@ test('v3 bounded fault details are protected, queried and grouped; forged packet
  assert.equal((await f.get(`&operation_id=${e.operation_id}`,'')).status,401);
  const details=await(await f.get(`&operation_id=${e.operation_id}`)).json();assert.deepEqual(details.timeline[0].fault,fault);
  const stats=await(await f.get()).json();assert.equal(stats.issues[0].fingerprint,fault.fingerprint);assert.equal(stats.issues[0].operations,1);
+ const page=await(await f.get('&view=errors')).json();assert.deepEqual(page.errors[0].fault,fault);assert.equal(page.errors[0].operation_outcome,'failed');
  for(const packet of [{...fault,privateKey:'secret'}, {...fault,output:['https://private.example/api']},
   {...fault,errors:[{...fault.errors[0],message:'Bearer private-token'}]}, {...fault,output:['x'.repeat(600)]},
   {...fault,environment:{...fault.environment,path:'/Users/private'}}]) {
   assert.equal((await(await f.post([{...e,event_id:crypto.randomUUID(),sequence:2,fault:packet}])).json()).rejected_event_ids.length,1);
  }
  assert.equal(validLauncherEvent({...e,status:'succeeded',error_code:'none'}),false);f.db.close();
+});
+
+test('error cursor discovers every failure and late arrivals without moving pages when new errors arrive',async()=>{
+ const f=setup();
+ const insert=e=>{const keys=Object.keys(e);f.db.prepare(`INSERT INTO launcher_events(${keys}) VALUES(${keys.map(()=>'?')})`).run(...keys.map(k=>e[k]));};
+ const failure=(i,overrides={})=>{const {schema_version,...e}=event({event:'operation_finished',status:'failed',error_code:'unknown',...overrides});
+  return {...e,installation_id:i.toString(16).padStart(64,'0'),received_at:Date.now()};};
+ for(let i=0;i<205;i++)insert(failure(i));
+ const summary=await(await f.get()).json();
+ assert.equal(summary.summary.failed_operations,205);assert.equal(summary.errors.length,100);assert.equal(summary.errors_truncated,true);
+ assert.equal((await f.get('&view=errors','')).status,401);
+ const first=await(await f.get('&view=errors')).json();assert.equal(first.errors.length,100);assert.equal(first.has_more,true);
+ const late={...failure(205),received_at:Date.now()-120000};insert(late);
+ let page=first;const errors=[...page.errors];
+ while(page.has_more){page=await(await f.get('&view=errors&cursor='+page.next_cursor)).json();errors.push(...page.errors);}
+ assert.equal(errors.length,206);assert.equal(new Set(errors.map(e=>e.event_id)).size,206);assert.equal(errors.at(-1).event_id,late.event_id);
+ const empty=await(await f.get('&view=errors&cursor='+page.next_cursor)).json();
+ assert.equal(empty.errors.length,0);assert.equal(empty.has_more,false);assert.equal(empty.next_cursor,page.next_cursor);
+ const next=failure(206);insert(next);
+ const resumed=await(await f.get('&view=errors&cursor='+empty.next_cursor)).json();assert.deepEqual(resumed.errors.map(e=>e.event_id),[next.event_id]);
+ for(const query of ['&view=errors&cursor=-1','&view=errors&cursor=1.5','&view=errors&cursor=9007199254740992','&view=errors&operation_id='+next.operation_id,'&view=errors&offset=1','&view=funnel&cursor=0','&cursor=0'])
+  assert.equal((await f.get(query)).status,400);
+ const filtered=await(await f.get('&view=errors&platform=darwin')).json();assert.equal(filtered.errors.length,0);
+ f.db.close();
+});
+
+test('bounded failure and issue aggregates explicitly report truncation',async()=>{
+ const f=setup();
+ const empty=await(await f.get()).json();
+ for(const field of ['errors_truncated','failures_truncated','issues_truncated'])assert.equal(empty[field],false);
+ for(let i=0;i<101;i++){
+  const {schema_version,...e}=event({event:'operation_finished',status:'failed',error_code:'http_error',http_status:400+i});
+  const value={...e,received_at:Date.now(),fault:JSON.stringify({fingerprint:i.toString(16).padStart(64,'0')})};
+  const keys=Object.keys(value);f.db.prepare(`INSERT INTO launcher_events(${keys}) VALUES(${keys.map(()=>'?')})`).run(...keys.map(k=>value[k]));
+ }
+ const data=await(await f.get()).json();
+ for(const field of ['errors','failures','issues']){assert.equal(data[field].length,100);assert.equal(data[field+'_truncated'],true);}
+ f.db.close();
 });
