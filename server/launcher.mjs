@@ -1,4 +1,5 @@
 import {launcherFunnel} from './launcher-funnel.mjs';
+import {launcherProblems} from './launcher-problems.mjs';
 import contract from './launcher-contract.json' with { type: 'json' };
 
 function validFaultPacket(value) {
@@ -133,6 +134,10 @@ export async function launcherStats(request, env) {
   where += ` AND ${key}=?`; values.push(value);
  }
  if(params.has('view')){
+  if(params.get('view')==='problems'){
+   const result=await launcherProblems(env,params,{where,values,from,to,monitorState});
+   return result.error?json({error:result.error},result.status):json(result.data);
+  }
   if(params.get('view')==='funnel'){
    const result=await launcherFunnel(env,params,{start,end,from,to});
    return result.error?json({error:result.error,message:result.message},result.status):json(result.data);
