@@ -8,8 +8,28 @@ function validFaultPacket(value) {
     && Object.keys(v).length === expected.length && expected.every(k => Object.hasOwn(v,k));
   const string = (v,n) => typeof v === 'string' && v.length <= n
     && !/(?:https?|wss?):\/\/|[A-Za-z]:[\\/]|\\\\|\/(?:Users|home|tmp|private|var|etc)\/|\b(?:Bearer|Basic)\s+(?!\[)|\b(?:sk-|ghp_|gho_)[A-Za-z0-9_-]+|["'](?:messages|content|prompt)["']\s*:/i.test(v);
-  if (!keys(value,['schema','fingerprint','environment','errors','output','breadcrumbs','truncated']) || value.schema !== 1 || typeof value.truncated !== 'boolean'
+  if (!keys(value,['schema','fingerprint','environment','errors','output','breadcrumbs','truncated',...(value.schema === 2 ? ['operation','evidence'] : [])]) || ![1,2].includes(value.schema) || typeof value.truncated !== 'boolean'
     || !/^[a-f0-9]{64}$/.test(value.fingerprint)) return false;
+  if (value.schema === 2) {
+    const integer = value => value === null || Number.isSafeInteger(value) && value >= 0;
+    const member = (value,list) => value === null || contract[list].includes(value);
+    const version = value => value === null || typeof value === 'string' && /^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]{1,40})?$/.test(value);
+    const code = value => value === null || typeof value === 'string' && /^[A-Z][A-Z0-9_]{0,99}$/.test(value);
+    const operation = value.operation;
+    if (operation !== null && (!keys(operation,['operation_id','snapshot_sequence','target_version','current_version','plan_digest','stage_id','effect_state','recovery_outcome','verification','attempt','total_attempts','primary_code','secondary_codes'])
+      || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(operation.operation_id)
+      || !integer(operation.snapshot_sequence) || !integer(operation.attempt) || !integer(operation.total_attempts)
+      || !version(operation.target_version) || !version(operation.current_version)
+      || !(operation.plan_digest === null || /^[a-f0-9]{64}$/.test(operation.plan_digest))
+      || !member(operation.stage_id,'faultOperationStages') || !member(operation.effect_state,'faultEffectStates')
+      || !member(operation.recovery_outcome,'faultRecoveryOutcomes') || !member(operation.verification,'faultVerifications')
+      || !code(operation.primary_code) || !Array.isArray(operation.secondary_codes) || operation.secondary_codes.length > 8 || !operation.secondary_codes.every(code))) return false;
+    const info = value.evidence;
+    if (!keys(info,['local_status','missing_reasons','primary_error_index','secondary_error_indexes']) || !contract.faultEvidenceStatuses.includes(info.local_status)
+      || !Array.isArray(info.missing_reasons) || info.missing_reasons.length > 16 || !info.missing_reasons.every(reason => contract.faultMissingReasons.includes(reason) || /^(?:save_failed|evidence_read_failed):[A-Z_]{1,32}$/.test(reason))
+      || !(info.primary_error_index === null || Number.isInteger(info.primary_error_index) && info.primary_error_index >= 0 && info.primary_error_index < value.errors?.length)
+      || !Array.isArray(info.secondary_error_indexes) || info.secondary_error_indexes.length > 4 || !info.secondary_error_indexes.every(index => Number.isInteger(index) && index >= 0 && index < value.errors?.length && value.errors[index].relation === 'secondary')) return false;
+  }
   const env = value.environment;
   if (!keys(env,['os_release','node','electron','launcher_build']) || !string(env.os_release,80)
     || !string(env.node,40) || !string(env.electron,40) || !/^(?:[a-f0-9]{64})?$/.test(env.launcher_build)) return false;
@@ -47,6 +67,7 @@ export function validLauncherEvent(e, now = Date.now()) {
   if (e.status === 'failed' && (!e.error_source || !e.error_site || !e.error_kind || e.attempt < 1)) return false;
  }
  if (e.schema_version < 3 && 'fault' in e) return false;
+ if (e.schema_version === 3 && e.fault?.schema === 2 && e.fault.operation && e.fault.operation.operation_id !== e.operation_id) return false;
  if (e.schema_version === 3 && (e.fault !== null && (!validFaultPacket(e.fault) || new TextEncoder().encode(JSON.stringify(e.fault)).length > contract.faultLimits.packetBytes)
    || e.fault !== null && (e.status !== 'failed' || !['launcher_error','operation_finished'].includes(e.event)))) return false;
  if (!integer(e.occurred_at, now + 300000) || e.occurred_at < now - 7 * DAY) return false;

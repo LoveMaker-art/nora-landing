@@ -1,5 +1,6 @@
 import {download,refreshInstallers} from './downloads.mjs';
 import {collectLauncher,launcherStats} from './launcher.mjs';
+import {collectOperationLogs,operationLogs} from './launcher-logs.mjs';
 const ORIGINS = new Set(['https://noratavern.com', 'https://lovemaker-art.github.io']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ALLOWED = {
@@ -87,6 +88,11 @@ export default {async scheduled(event,env,ctx) {ctx.waitUntil(refreshInstallers(
  const url=new URL(request.url);if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);
  try {
   if(url.pathname==='/api/launcher/events'&&request.method==='POST')return await collectLauncher(request,env,visitorHash);
+  if(url.pathname==='/api/launcher/logs'&&request.method==='POST')return await collectOperationLogs(request,env,visitorHash);
+  if(url.pathname==='/api/launcher/logs'&&request.method==='GET') {
+   if(!env.STATS_READ_KEY||!await secretMatches(request.headers.get('Authorization'),`Bearer ${env.STATS_READ_KEY}`))return json({error:'unauthorized'},401);
+   return await operationLogs(request,env);
+  }
   if(url.pathname==='/api/launcher/stats'&&request.method==='GET') {
    if(!env.STATS_READ_KEY||!await secretMatches(request.headers.get('Authorization'),`Bearer ${env.STATS_READ_KEY}`))return json({error:'unauthorized'},401);
    return await launcherStats(request,env);
