@@ -77,3 +77,39 @@ test('HTTP 200 HTML error page is not accepted as an installer',async()=>{
  const fetcher=async(u,o)=>o.method==='HEAD'?new Response(null,{status:200,headers:{'Content-Type':'text/html'}}):Response.json([]);
  await assert.rejects(resolveInstaller(env,'windows',{now:NOW,fetcher}),/download_unavailable/);
 });
+const SF='https://downloads.sourceforge.net/project/nora-tavern/';
+test('healthy GitHub checks never contact SourceForge',async()=>{
+ const env=database(),calls=[],latest=release();
+ const result=await resolveInstaller(env,'windows',{now:NOW,fetcher:async(u,o)=>{calls.push(u);return o.method==='HEAD'?new Response(null):Response.json([latest]);}});
+ assert.equal(result.url,latest.assets[0].browser_download_url);
+ assert.ok(calls.every(u=>!u.includes('sourceforge.net')));
+});
+test('throttled GitHub discovers and verifies an installer through the SourceForge catalogue',async()=>{
+ const env=database(),latest=release(),calls=[];
+ latest.assets[0].digest='sha256:'+'a'.repeat(64);
+ const result=await resolveInstaller(env,'windows',{now:NOW,fetcher:async(u,o)=>{
+  calls.push(u);if(!u.includes('sourceforge.net'))return new Response(null,{status:403});
+  assert.equal(o.redirect,'manual');
+  if(u===SF+'channels/stable.json')return new Response(null,{status:302,headers:{Location:u.replace('downloads.sourceforge.net','zenlayer.dl.sourceforge.net')}});
+  if(u.includes('channels/stable.json'))return Response.json(latest);
+  return new Response(null,{headers:{'Content-Type':'application/octet-stream','Content-Length':'100'}});
+ }});
+ assert.equal(result.url,latest.assets[0].browser_download_url.replace('https://github.com/LoveMaker-art/noras-tavern/releases/download/',SF));
+ assert.ok(calls.includes(SF+'channels/stable.json'));
+ const cached=await resolveInstaller(env,'windows',{now:NOW+1000,fetcher:async()=>assert.fail('fresh verified backup should be cached')});
+ assert.equal(cached.url,result.url);
+});
+test('a failed GitHub file uses the same version on SourceForge even when GitHub metadata works',async()=>{
+ const env=database(),latest=release();
+ const result=await resolveInstaller(env,'windows',{now:NOW,fetcher:async(u,o)=>o.method==='HEAD'
+  ?new Response(null,{status:u.startsWith(SF)?200:503}):Response.json([latest])});
+ assert.equal(result.url,latest.assets[0].browser_download_url.replace('https://github.com/LoveMaker-art/noras-tavern/releases/download/',SF));
+});
+test('a SourceForge redirect outside its trusted project never receives a request',async()=>{
+ const env=database(),calls=[];
+ await assert.rejects(resolveInstaller(env,'windows',{now:NOW,fetcher:async(u,o)=>{
+  calls.push(u);if(!u.startsWith(SF))return new Response(null,{status:403});
+  return new Response(null,{status:302,headers:{Location:'https://evil.example/channels/stable.json'}});
+ }}),/download_unavailable/);
+ assert.ok(calls.every(u=>!u.startsWith('https://evil.example/')));
+});

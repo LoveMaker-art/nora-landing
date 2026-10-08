@@ -155,23 +155,46 @@ print(data['summary'])
 
 当前范围：启动器上报 → Cloudflare Worker 接收 → D1 存储 → 开发者定时调用查询接口。不新增监控页面。复用现有 Worker、数据库和读密钥；启动器数据单独保存在 `launcher_events`，网站 `/api/events`、`/api/stats` 及已有网站统计保持原契约，不将浏览器访客与安装标识关联。
 
+部署人员与取数开发者的实施步骤、接口示例、验收及回退要求见 [启动器诊断接收端技术对接文档](launcher-receiver-handoff.md)。
+
 ### 当前交付状态
 
 | 内容 | 状态 |
 | --- | --- |
 | 基础事件接收与查询 | 2026-09-30 有部署和入库验收记录，见本节末尾 |
-| v3 详细故障接收与查询 | 已合入本地 main；本轮未部署，生产新增字段及带鉴权查询尚未验收 |
-| 首次安装漏斗查询 | 已纳入本地 main 并通过隔离查询验证；尚未部署，见 [漏斗查询说明](launcher-funnel.md) |
+| v3 详细故障接收与查询 | 2026-10-01 已核对生产迁移和部署，真实接收、鉴权故障查询、时间线及错误分页通过联调，见 [线上验收记录](launcher-receiver-acceptance.md) |
+| 首次安装漏斗查询 | 2026-10-01 生产查询及跨日期合成场景通过联调，见 [漏斗查询说明](launcher-funnel.md) |
+| S2 整次脱敏操作日志 | 2026-10-05 已应用 0008、部署接收端，并通过真实客户端生产 HTTP 入库、分页、续传、同标识关联查询和重复确认去重验收；自建测试数据已定向清理，见 [线上验收记录](launcher-receiver-acceptance.md) |
 | 新启动器上报规则 | 启动器仓库已合入本地 main；安装包尚未发布 |
 
 源码合并不等于线上生效，旧启动器不会自动获得新的采集规则，历史缺失事件不回补。
+
+### S2 原始操作日志扩展（2026-10-05 接收端已部署，启动器未发布）
+
+生产 Worker 版本 `4165eaf3-1d9c-491b-983c-33706eb6c308`，0008 日志表迁移已执行，首页与现有统计、错误分页、问题汇总和漏斗查询已复核。日志查询未授权返回 401，持读密钥返回 200。2026-10-05 14:16（上海时间）真实日志生产者与投递客户端的生产验收通过：失败操作 30 段日志分两页完整取回，与本地脱敏文本一致；丢 ACK 后同段发送两次仅存一份；断网重开续传、成功不上传整次日志、主动关闭只保留基础统计、中断重开补传均通过。同一故障统计安装 HMAC 可以查询对应日志，schema2 故障摘要也已入库验证。
+
+本次只构造独立 `repair` 测试操作，没有启动真实酒馆、改动真实安装或发布启动器。启动器侧核对自建安装标识、事件 UUID、操作 UUID 和 chunk_id 后，定向清理 19 条基础事件及 31 段日志，两表该测试身份均剩余 0 条；真实用户数据未删除。本次接收与查询链路验收不能代替三平台发布安装包的实机验收，详见 [验收记录](launcher-receiver-acceptance.md)。
+
+故障包用于快速归类；完整排查另取失败操作从开始到最终结果的脱敏执行记录。成功操作仍只发送基础统计，执行中的原始输出留在本地控制台。详细诊断关闭时不发送整次日志，不包含聊天、模型回复、密钥、配置全文或日常服务日志。白名单和脱敏规则不能证明任意第三方输出必定没有敏感信息。
+
+`POST /api/launcher/logs` 接收一段日志，字段固定为 `schema:1`、`installation_id`、`operation_id`、`log_id`、`index`、`text`、`final`、`missing`、`chunk_id`。三个 ID 为 UUID v4；`index` 从 0 开始，最大 4095；单段 `text` 为 UTF-8 文本，最多 16 KiB。`chunk_id` 为 UTF-8 JSON 数组 `[operation_id,log_id,index,text,final,missing]` 的 SHA-256 小写十六进制。精确重复段返回原 ACK；同身份不同内容返回 409，不能覆盖已入库原件。公开上报不携带查询密钥，安装 UUID 经现有 HMAC 后入库。
+
+202 响应须同时匹配 `accepted:true`、`index`、`chunk_id`，客户端才推进持久游标。断网或 ACK 丢失重试同一段。400/401/403/404/409 停止该份日志的自动重传并保留失败事实；429/5xx/网络失败延后重传，最长七天。原始日志队列和基础统计队列各自确认；基础队列空不能证明原始日志已收齐。日志分段写入 `launcher_operation_logs`，不增加错误次数或安装漏斗分母。
+
+`GET /api/launcher/logs?operation_id=<UUID>` 使用与统计相同的 `Authorization: Bearer <STATS_READ_KEY>`。同操作存在多份失败快照时，返回 `available_logs` 并默认选最近收到的一份；同一操作存在多个安装身份时返回 409，要求指定统计接口返回的 HMAC `installation_id`。查询返回的 `log_id` 必须固定用于后续翻页：`GET /api/launcher/logs?operation_id=<UUID>&log_id=<UUID>&offset=<next_offset>`。每页最多 16 段，按 `chunk_index` 升序拼接 `text`；`has_more` 决定是否继续取页，不要在翻页时重新选择最新快照。
+
+`received_chunks` 是该快照已入库段数；`final_index` 是终结段编号；`sequence_complete` 表示 0 到终结段连续无缺段，`complete` 还要求没有源日志缺失、省略或裁剪标记。无日志返回 `complete:false` 和 `missing:["not_received"]`，不能当成无错误。分段全收齐也不代表安装成功、根因已经查明或全部程序历史日志完整；最终业务结果仍以操作统计与日志事实判断。
+
+2026-10-05 源码核对及接收端部署：日志与基础事件统一使用 `HMAC("launcher:" + installation_id)`，查询可直接使用故障/时间线返回的安装标识。不存在的指定快照或安装标识也返回 `not_received`；缺失原因汇总扫描整份快照，不限前 12 段。offset 只接受十进制非负整数，4096 作为末尾空页游标合法，不能上传编号为 4096 的分段。生产部署前的 404 记录保留在交接证据中，不能据此判断当前接口状态。
+
+`missing` 的固定值为 `log_path_rejected`、`log_read_failed`、`log_record_invalid`、`log_history_trimmed`、`log_order_unknown`、`console_record_too_large`、`service_output_omitted`、`sensitive_content_omitted`、`redaction_failed`、`source_missing`、`chunk_limit`。`log_order_unknown` 表示旧日志在主备文件间存在同时间记录，缺少顺序信息，不能确认原始先后关系。完整日志是本次受控操作在保留预算内的记录；不回补未输出、不可写盘或已轮转删除的内容。接收端需先备份数据库、执行 `0008_launcher_operation_logs.sql` 并部署路由，再进行生产 ACK/鉴权查询验收；客户端在此之后发布。
 
 ### 接收接口
 
 `POST https://noratavern.com/api/launcher/events` 接收 `{ "events": [...] }`。当前协议为 v3，接收端保留 v1/v2 兼容。事件、字段、阶段和错误码的唯一白名单是 `server/launcher-contract.json`，与启动器 `telemetry-contract.json` 同步。
 
-- 基础操作阶段、耗时、状态和固定技术错误码不受详细诊断开关控制。详细诊断默认关闭；用户主动授权后，新操作的故障事件才带脱敏 `fault`。关闭详细诊断不停止基础统计。
-- 单批 1 至 20 条，最大 60,000 字节；故障包最大 24 KiB。最多回溯 7 天，容忍客户端快 5 分钟；未知字段、非法错误码及未脱敏内容拒收。
+- 基础操作阶段、耗时、状态和固定技术错误码不受详细诊断开关控制。详细诊断选择决定新操作的故障事件是否携带脱敏 `fault`，关闭不停止基础统计。S2 客户端按用户最新要求对新选择默认开启，并保留已有主动关闭选择；源码改动不改变已发布旧客户端的选择行为。
+- 单批 1 至 20 条，客户端请求预算为 60,000 字节，服务端请求体硬上限为 65,536 字节；故障包最大 24 KiB。最多回溯 7 天，容忍客户端快 5 分钟；未知字段、非法错误码及检测到的不合规未脱敏内容拒收。
 - 安装随机标识经 HMAC 后入库，服务端不保存原始 IP、安装 UUID、请求头或完整本地日志。数据用于关联安装环境，不等于真实人数。详细包不包含密钥、聊天、模型回复、配置全文或 Hermes 日常内部日志。
 - 公开采集接口不携带查询密钥。现有 IP 限流及 `LAUNCHER_TELEMETRY_PAUSED=true` 停收机制保留。
 - 202 返回 `accepted_event_ids` 和 `rejected_event_ids`；重试不重复写入。`invalid_event`、`identity_conflict` 是单条永久拒绝，429 或 503 不代表成功接收。
@@ -202,7 +225,7 @@ print(data['summary'])
 
 追加 `operation_id=<操作UUID>` 查询该次操作的 `timeline`，可限定 `installation_id=<查询返回的HMAC标识>`。每页最多 500 条，用 `next_offset` 继续；`timeline[].fault` 可查看故障证据。操作时间线取该操作全部事件，不受日期、版本过滤限制，但日期参数仍须合法。
 
-首次安装漏斗采用 `view=funnel`，复用已有事件，其观察窗口、转化率与缺失数据口径集中维护在 [漏斗查询说明](launcher-funnel.md)，不在这里重复定义。该视图已纳入本地 main，尚未上线。
+首次安装漏斗采用 `view=funnel`，复用已有事件，其观察窗口、转化率与缺失数据口径集中维护在 [漏斗查询说明](launcher-funnel.md)，不在这里重复定义。该视图已上线，并通过 2026-10-01 的合成场景联调。
 
 原始事件保留期限尚未确定，当前没有自动删除任务。断网、停收、队列淘汰或客户端未启动会造成缺失；接口不补造这些数据，也不根据基础设施访问日志推断用户行为。
 

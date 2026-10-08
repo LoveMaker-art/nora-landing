@@ -42,3 +42,15 @@ test('only actual requests produce one outcome; busy and cooldown clicks produce
  const fail=harness(async()=>Response.json({error:'check_cooldown',retryAfter:2},{status:429}));fail.click();await settle();fail.click();
  assert.equal(fail.events.length,1);assert.equal(fail.events[0].event,'download_failed');assert.equal(fail.events[0].result,'rate_limited');
 });
+test('a verified SourceForge installer uses the original download card and feedback',async()=>{
+ const target=file.replace('https://github.com/LoveMaker-art/noras-tavern/releases/download/','https://downloads.sourceforge.net/project/nora-tavern/');
+ const h=harness(async()=>Response.json({url:target}));h.click();await settle();
+ assert.equal(h.frame.src,target);assert.equal(h.events[0].event,'download_ready');
+ assert.equal(h.links[0].detail.textContent,'安装包格式');
+});
+test('untrusted SourceForge projects, platform mismatches and signed links cannot navigate',async()=>{
+ const target=file.replace('https://github.com/LoveMaker-art/noras-tavern/releases/download/','https://downloads.sourceforge.net/project/nora-tavern/');
+ for(const url of [target.replace('nora-tavern/','other/'),target+'?token=secret',target.replace('-win-x64-setup.exe','-mac-arm64.dmg'),target.replace('1.1.2-','1.1.2-malformed-')]) {
+  const h=harness(async()=>Response.json({url}));h.click();await settle();assert.equal(h.frame.src,undefined);assert.equal(h.events[0].event,'download_failed');
+ }
+});

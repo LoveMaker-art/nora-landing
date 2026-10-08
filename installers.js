@@ -37,7 +37,11 @@
    if(!response.ok){const e=new Error(data.error);e.status=response.status;e.retryAfter=data.retryAfter;throw e;}
    const target=new URL(data.url);
    const suffix={windows:'-win-x64-setup.exe','mac-arm64':'-mac-arm64.dmg','mac-x64':'-mac-x64.dmg'}[platform];
-   if(target.origin!=='https://github.com'||!target.pathname.startsWith('/LoveMaker-art/noras-tavern/releases/download/')||!target.pathname.endsWith(suffix))throw new Error('invalid_download');
+   const root=target.origin==='https://github.com'?'/LoveMaker-art/noras-tavern/releases/download/'
+    :target.origin==='https://downloads.sourceforge.net'?'/project/nora-tavern/':null;
+   const [tag,name,...rest]=root?target.pathname.slice(root.length).split('/'):[];
+   if(!root||!target.pathname.startsWith(root)||target.username||target.password||target.search||target.hash
+    ||rest.length||!/^v\d+\.\d+\.\d+$/.test(tag)||!new RegExp('^Nora-Tavern-Launcher-\\d+\\.\\d+\\.\\d+'+suffix.replaceAll('.','\\.')+'$').test(name))throw new Error('invalid_download');
    frame.src=target.href;report('download_ready',platform,'ready');render(card,'idle');
    say(`已发起 ${names[platform]} 下载，请查看浏览器下载列表。`);
   }catch(error){
