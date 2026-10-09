@@ -30,6 +30,34 @@ test('cold start verifies seed even when release API fails; never redirects to t
  const env=database();const r=await download(req(),env,null,{now:NOW,fetcher:async(u,o)=>new Response(null,{status:o.method==='HEAD'?200:403})});
  assert.equal(r.status,302);assert.equal(r.headers.get('Location'),seed.windows.url);
 });
+for (const failure of ['read','write','missing']) test(`verified installers remain downloadable when database ${failure} fails`,async()=>{
+ const latest=release(),env=failure==='missing'?{}:{DB:{prepare(){return {bind(){return {
+  async all(){if(failure==='read')throw Error('D1 daily read limit exceeded');return {results:[]};},
+  async run(){throw Error('D1 unavailable');}
+ }}};}}};
+ const response=await download(req('?format=json'),env,null,{now:NOW,fetcher:async(url,options)=>
+  options.method==='HEAD'?new Response(null,{headers:{'Content-Type':'application/octet-stream'}}):Response.json([latest])});
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).url,latest.assets[0].browser_download_url);
+});
+test('database failure cannot turn an unverified or deleted installer into a download',async()=>{
+ const env={DB:{prepare(){throw Error('D1 daily read limit exceeded');}}};
+ const response=await download(req('?format=json'),env,null,{now:NOW,fetcher:async(url,options)=>
+  options.method==='HEAD'?new Response(null,{status:404}):Response.json([])});
+ assert.equal(response.status,503);
+ assert.equal(response.headers.get('Location'),null);
+});
+test('database-independent cache and concurrent requests reuse only a verified address',async()=>{
+ const entries=new Map(),cache={async match(key){return entries.get(key)?.clone();},async put(key,response){entries.set(key,response.clone());}};
+ let reads=0,heads=0;
+ const env={DB:{prepare(){reads++;throw Error('D1 daily read limit exceeded');}}},latest=release();
+ const fetcher=async(url,options)=>{await new Promise(resolve=>setTimeout(resolve,2));if(options.method==='HEAD'){heads++;return new Response(null);}return Response.json([latest]);};
+ const options={now:NOW,fetcher,cache};
+ const results=await Promise.all(Array.from({length:10},()=>resolveInstaller(env,'windows',options)));
+ assert.equal(reads,1);assert.ok(results.every(r=>r.url===latest.assets[0].browser_download_url));
+ const previousHeads=heads;await resolveInstaller(env,'windows',{...options,now:NOW+1000});assert.equal(reads,1);assert.equal(heads,previousHeads);
+ await resolveInstaller(env,'windows',{...options,now:NOW+901000});assert.equal(reads,2);assert.ok(heads>previousHeads);
+});
 test('confirmed 404 is persisted and replaced by a verified alternative',async()=>{
  const env=database(),old=put(env,'windows',3600000),latest=release();
  const fetcher=async(u,o)=>o.method==='HEAD'?new Response(null,{status:u===old?404:200}):Response.json([latest]);
@@ -65,7 +93,7 @@ test('platforms are independent; no configuration fails closed',async()=>{
  const env=database();const fetcher=async(u,o)=>{if(o.method==='HEAD')return new Response(null,{status:u.endsWith('.exe')?404:200});return Response.json([]);};
  await refreshInstallers(env,fetcher);
  assert.equal(env.sql.prepare('SELECT count(*) n FROM installer_links').get().n,2);
- assert.equal((await download(req(),{})).status,503);
+ assert.equal((await download(req(),{},null,{fetcher:async()=>new Response(null,{status:503})})).status,503);
  assert.equal((await download(new Request('https://noratavern.com/api/download/invalid'),env)).status,404);
 });
 test('release selection rejects test packages and mismatched URLs',()=>{

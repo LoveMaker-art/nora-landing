@@ -1,4 +1,5 @@
 import {download,refreshInstallers} from './downloads.mjs';
+import {aggregateRead} from './aggregate-cache.mjs';
 import {collectLauncher,launcherStats} from './launcher.mjs';
 import {collectOperationLogs,operationLogs} from './launcher-logs.mjs';
 const ORIGINS = new Set(['https://noratavern.com', 'https://lovemaker-art.github.io']);
@@ -95,12 +96,17 @@ export default {async scheduled(event,env,ctx) {ctx.waitUntil(refreshInstallers(
   }
   if(url.pathname==='/api/launcher/stats'&&request.method==='GET') {
    if(!env.STATS_READ_KEY||!await secretMatches(request.headers.get('Authorization'),`Bearer ${env.STATS_READ_KEY}`))return json({error:'unauthorized'},401);
-   return await launcherStats(request,env);
+   return url.searchParams.get('view')==='funnel'
+    ?await aggregateRead(request,()=>launcherStats(request,env))
+    :await launcherStats(request,env);
   }
   if(url.pathname.startsWith('/api/download/'))return await download(request,env,ctx);
   if(url.pathname==='/api/events'&&request.method==='OPTIONS') {const origin=request.headers.get('Origin');return ORIGINS.has(origin)?new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin,'Vary':'Origin','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Max-Age':'3600'}}):json({error:'origin_not_allowed'},403);}
   if(url.pathname==='/api/events'&&request.method==='POST')return await collect(request,env);
-  if(url.pathname==='/api/stats'&&request.method==='GET')return await stats(request,env);
+  if(url.pathname==='/api/stats'&&request.method==='GET'){
+   if(!env.STATS_READ_KEY||!await secretMatches(request.headers.get('Authorization'),`Bearer ${env.STATS_READ_KEY}`))return json({error:'unauthorized'},401);
+   return await aggregateRead(request,()=>stats(request,env));
+  }
   return json({error:'not_found'},404);
  }catch{return json({error:'temporarily_unavailable'},503);}
 }};

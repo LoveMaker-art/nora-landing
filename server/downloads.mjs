@@ -4,6 +4,7 @@ const API='https://api.github.com/repos/LoveMaker-art/noras-tavern/releases';
 const SF_BASE='https://downloads.sourceforge.net/project/nora-tavern/';
 const patterns={windows:/^Nora-Tavern-Launcher-[\d.]+-win-x64-setup\.exe$/, 'mac-arm64':/^Nora-Tavern-Launcher-[\d.]+-mac-arm64\.dmg$/, 'mac-x64':/^Nora-Tavern-Launcher-[\d.]+-mac-x64\.dmg$/};
 const FRESH=15*60*1000, GRACE=24*60*60*1000, COOLDOWN=30000;
+const pendingChecks=new WeakMap();
 function valid(platform,asset) {
  if(!asset||!Number.isFinite(Date.parse(asset.published)))return false;
  try {const url=new URL(asset.url),root=asset.url.startsWith(BASE)?BASE:SF_BASE;
@@ -53,18 +54,41 @@ async function smallJson(response) {
  for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
  return JSON.parse(new TextDecoder().decode(bytes));
 }
-// A shared D1 lease bounds retries across Worker instances, not only one process.
-export async function resolveInstaller(env,platform,{force=false,fetcher=fetch,now=Date.now()}={}) {
- if(!env.DB)throw new Error('temporarily_unavailable');
- const saved=await row(env.DB,'SELECT * FROM installer_links WHERE platform=?',platform);
+// Verified addresses remain reusable even when analytics storage is unavailable.
+export async function resolveInstaller(env,platform,{force=false,fetcher=fetch,now=Date.now(),cache=globalThis.caches?.default}={}) {
+ const key='https://noratavern.com/__nora_cache/installer-v1/'+platform;
+ if(cache&&!force)try{
+  const response=await cache.match(key),saved=response&&await response.json();
+  if(saved&&valid(platform,saved)&&saved.checked_at<=now&&now-saved.checked_at<FRESH)return {url:saved.url,source:'edge_cache'};
+ }catch{/* A cache outage falls back to official-source verification. */}
+ let pending=cache&&pendingChecks.get(cache);
+ if(cache&&!pending){pending=new Map();pendingChecks.set(cache,pending);}
+ if(pending?.has(platform))return pending.get(platform);
+ const job=(async()=>{
+  const result=await checkInstaller(env,platform,{force,fetcher,now});
+  if(cache)try{await cache.put(key,Response.json(result,{headers:{'Cache-Control':'public, max-age=900'}}));}catch{}
+  return {url:result.url,source:result.source};
+ })();
+ pending?.set(platform,job);
+ try{return await job;}finally{pending?.delete(platform);}
+}
+// A shared D1 lease bounds retries when storage is available.
+async function checkInstaller(env,platform,{force,fetcher,now}) {
+ // Storage accelerates resolution; it must not prevent a verified file download.
+ let db=env.DB;
+ const stored=async operation=>{
+  if(!db)return;
+  try{return await operation(db);}catch{db=null;console.warn('Installer storage unavailable; verifying official download sources.');}
+ };
+ const saved=await stored(db=>row(db,'SELECT * FROM installer_links WHERE platform=?',platform));
  const current=valid(platform,saved)?saved:{...seed[platform],checked_at:0};
- const health=await row(env.DB,'SELECT * FROM installer_health WHERE url=?',current.url);
+ const health=await stored(db=>row(db,'SELECT * FROM installer_health WHERE url=?',current.url));
  const recentlyGood=()=>health?.state!=='missing'&&current.checked_at>0&&now-current.checked_at<GRACE;
- if(!force&&recentlyGood()&&now-current.checked_at<FRESH)return {url:current.url,source:'cache'};
- const lease=await env.DB.prepare('INSERT INTO installer_checks(platform,attempted_at) VALUES(?,?) ON CONFLICT(platform) DO UPDATE SET attempted_at=excluded.attempted_at WHERE installer_checks.attempted_at <= ?').bind(platform,now,now-COOLDOWN).run();
- if(Number(lease.meta?.changes??lease.changes??0)===0) {
+ if(!force&&recentlyGood()&&now-current.checked_at<FRESH)return {url:current.url,published:current.published,checked_at:current.checked_at,source:'cache'};
+ const lease=await stored(db=>db.prepare('INSERT INTO installer_checks(platform,attempted_at) VALUES(?,?) ON CONFLICT(platform) DO UPDATE SET attempted_at=excluded.attempted_at WHERE installer_checks.attempted_at <= ?').bind(platform,now,now-COOLDOWN).run());
+ if(lease&&Number(lease.meta?.changes??lease.changes??0)===0) {
   // A retry cannot silently reuse an unchecked address while another check runs.
-  if(!force&&recentlyGood())return {url:current.url,source:'recent_cache'};
+  if(!force&&recentlyGood())return {url:current.url,published:current.published,checked_at:current.checked_at,source:'recent_cache'};
   const e=new Error('check_cooldown');e.retryAfter=30;throw e;
  }
  const deadline=AbortSignal.timeout(18000),githubDeadline=AbortSignal.timeout(10000);
@@ -72,7 +96,7 @@ export async function resolveInstaller(env,platform,{force=false,fetcher=fetch,n
  let currentMissing=health?.state==='missing';
  const probe=async asset=>{
   if(seen.has(asset.url))return seen.get(asset.url);
-  const known=await row(env.DB,'SELECT * FROM installer_health WHERE url=?',asset.url);
+  const known=await stored(db=>row(db,'SELECT * FROM installer_health WHERE url=?',asset.url));
   // Do not resurrect a known deleted file through a seed or another release scan.
   if(known?.state==='missing'&&now-known.checked_at<FRESH){seen.set(asset.url,false);return false;}
   let state='unknown';
@@ -83,7 +107,7 @@ export async function resolveInstaller(env,platform,{force=false,fetcher=fetch,n
    const fileResponse=r.ok&&!/text\/html|application\/json/i.test(type)&&r.headers.get('Content-Length')!=='0';
    state=fileResponse?'healthy':[404,410].includes(r.status)?'missing':'unknown';
   }catch{}
-  if(state!=='unknown')await env.DB.prepare('INSERT INTO installer_health(url,state,checked_at) VALUES(?,?,?) ON CONFLICT(url) DO UPDATE SET state=excluded.state,checked_at=excluded.checked_at').bind(asset.url,state,now).run();
+  if(state!=='unknown')await stored(db=>db.prepare('INSERT INTO installer_health(url,state,checked_at) VALUES(?,?,?) ON CONFLICT(url) DO UPDATE SET state=excluded.state,checked_at=excluded.checked_at').bind(asset.url,state,now).run());
   if(asset.url===current.url&&state==='missing')currentMissing=true;
   seen.set(asset.url,state==='healthy');return state==='healthy';
  };
@@ -119,8 +143,8 @@ export async function resolveInstaller(env,platform,{force=false,fetcher=fetch,n
    if(await probe(asset)){verified=asset;break;}
   }
  }catch{/* An unchecked or partial backup catalogue never creates a download target. */}
- if(verified){await save(env.DB,platform,verified,now);return {url:verified.url,source:'verified'};}
- if(!currentMissing&&recentlyGood())return {url:current.url,source:'recent_cache'};
+ if(verified){await stored(db=>save(db,platform,verified,now));return {...verified,checked_at:now,source:'verified'};}
+ if(!currentMissing&&recentlyGood())return {url:current.url,published:current.published,checked_at:current.checked_at,source:'recent_cache'};
  throw new Error('download_unavailable');
 }
 export async function refreshInstallers(env,fetcher=fetch) {
