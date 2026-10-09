@@ -36,6 +36,17 @@ test('cache failure does not prevent a successful live query',async()=>{
  const broken={async match(){throw Error('cache unavailable');},async put(){throw Error('cache unavailable');}};
  const result=await aggregateRead(request(),()=>Response.json({value:1}),{cache:broken});assert.equal(result.status,200);
 });
+test('quota reuses the last successful matching aggregate after freshness expires',async t=>{
+ let now=Date.parse('2026-10-09T06:00:00Z');t.mock.method(Date,'now',()=>now);
+ const store=cache(),value={generated_at:'2026-10-09T06:00:00Z',summary:{uv:294}};let calls=0;
+ await aggregateRead(request(),()=>Response.json(value),{cache:store});now+=1800000;
+ const blocked=async()=>{calls++;throw Error('D1 daily row read limit exceeded');};
+ const response=await aggregateRead(request(),blocked,{cache:store});assert.equal(response.status,200);
+ const body=await response.json();assert.equal(body.summary.uv,294);assert.equal(body.generated_at,value.generated_at);assert.equal(body.stale.reason,'daily_read_limit');
+ const again=await aggregateRead(request(),blocked,{cache:store});assert.equal(again.status,200);assert.equal(calls,1);
+ const other=await aggregateRead(request('from=2026-10-08&to=2026-10-08'),blocked,{cache:store});assert.equal(other.status,503);assert.equal(calls,1);
+ now=Date.parse('2026-10-10T00:00:01Z');const recovered=await aggregateRead(request(),()=>Response.json({...value,summary:{uv:300}}),{cache:store});assert.equal((await recovered.json()).stale,undefined);
+});
 test('cached aggregate access still requires valid authentication',async()=>{
  const original=globalThis.caches,store=cache();globalThis.caches={default:store};
  try{

@@ -3,8 +3,17 @@ const quotaKey='https://noratavern.com/__nora_cache/d1-read-limit-v1';
 const DAY=86400000;
 const quotaError=error=>/D1.*daily row read limit|exceeded.*daily.*row.*read/i.test(String(error?.message||''));
 function client(response,state){
+ if(response.headers.get('X-Nora-Cache')==='stale')state='stale';
  const headers=new Headers(response.headers);headers.set('Cache-Control','no-store');headers.set('X-Nora-Cache',state);
  return new Response(response.body,{status:response.status,headers});
+}
+async function lastResult(cache,key,limited){
+ const saved=await match(cache,key);if(!saved?.ok)return limited;
+ try{
+  const body=await saved.json(),error=await limited.clone().json();
+  return Response.json({...body,stale:{reason:error.error,retry_at:error.retry_at}},
+   {headers:{'Cache-Control':'no-store','X-Nora-Cache':'stale'}});
+ }catch{return limited;}
 }
 async function match(cache,key){try{return await cache?.match(key);}catch{return null;}}
 async function put(cache,key,response,ttl){
@@ -16,17 +25,17 @@ async function put(cache,key,response,ttl){
 // Call only after authentication, and only for aggregate statistics, not raw logs.
 export async function aggregateRead(request,load,{cache=globalThis.caches?.default,ttl=1800}={}){
  const url=new URL(request.url);url.searchParams.sort();url.pathname='/__nora_cache/aggregate-v1'+url.pathname;
- const key=url.href,saved=await match(cache,key);
- if(saved?.ok)return client(saved,'hit');
+ const key=url.href,lastKey=key.replace('/aggregate-v1','/aggregate-last-v1'),saved=await match(cache,key);
+ if(saved?.ok){await put(cache,lastKey,saved,7*86400);return client(saved,'hit');}
  const limited=await match(cache,quotaKey);
- if(limited)return client(limited,'quota');
+ if(limited)return client(await lastResult(cache,lastKey,limited),'quota');
  let pending=cache&&inFlight.get(cache);
  if(cache&&!pending){pending=new Map();inFlight.set(cache,pending);}
  if(pending?.has(key))return client((await pending.get(key)).clone(),'coalesced');
  const job=(async()=>{
   try{
    const response=await load();
-   if(response.ok)await put(cache,key,response,ttl);
+   if(response.ok){await put(cache,key,response,ttl);await put(cache,lastKey,response,7*86400);}
    return response;
   }catch(error){
    if(!quotaError(error))throw error;
@@ -35,7 +44,7 @@ export async function aggregateRead(request,load,{cache=globalThis.caches?.defau
     {status:503,headers:{'Cache-Control':'no-store','Retry-After':String(seconds)}});
    console.warn('D1 daily read quota exhausted; statistics paused until UTC midnight.');
    await put(cache,quotaKey,response,seconds);
-   return response;
+   return await lastResult(cache,lastKey,response);
   }
  })();
  pending?.set(key,job);
