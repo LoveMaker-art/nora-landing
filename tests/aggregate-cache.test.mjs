@@ -18,7 +18,9 @@ test('identical and concurrent queries share one computation; filters remain sep
 test('expired aggregates refresh; ordinary errors are not cached',async t=>{
  let now=Date.parse('2026-10-09T06:00:00Z');t.mock.method(Date,'now',()=>now);
  const store=cache();let calls=0;const load=async()=>Response.json({value:++calls});
- await aggregateRead(request(),load,{cache:store});now+=901000;await aggregateRead(request(),load,{cache:store});assert.equal(calls,2);
+ await aggregateRead(request(),load,{cache:store});
+ now+=1799000;const cached=await aggregateRead(request(),load,{cache:store});assert.equal(cached.headers.get('X-Nora-Cache'),'hit');assert.equal(calls,1);
+ now+=1000;await aggregateRead(request(),load,{cache:store});assert.equal(calls,2);
  const failed=async()=>{calls++;return Response.json({error:'temporary'},{status:503});};
  for(let i=0;i<2;i++)await aggregateRead(request('from=2026-10-09&to=2026-10-09'),failed,{cache:store});assert.equal(calls,4);
 });

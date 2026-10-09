@@ -14,7 +14,7 @@ async function put(cache,key,response,ttl){
 }
 
 // Call only after authentication, and only for aggregate statistics, not raw logs.
-export async function aggregateRead(request,load,{cache=globalThis.caches?.default,ttl=900}={}){
+export async function aggregateRead(request,load,{cache=globalThis.caches?.default,ttl=1800}={}){
  const url=new URL(request.url);url.searchParams.sort();url.pathname='/__nora_cache/aggregate-v1'+url.pathname;
  const key=url.href,saved=await match(cache,key);
  if(saved?.ok)return client(saved,'hit');
