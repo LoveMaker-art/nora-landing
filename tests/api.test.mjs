@@ -66,3 +66,20 @@ test('dashboard has four core metrics, deduped platforms and separate diagnostic
  assert.equal((await get(env,'&view=unknown')).status,400);
  const old=await(await get(env)).json();assert.equal(old.summary.download_clicks,3);assert.ok(old.events.some(e=>e.event==='installer_resolve'));
 });
+
+test('scoped entries persist idempotently and queries never reuse legacy mixed clicks',async()=>{
+ const {env,sql}=setup(),visitor=crypto.randomUUID();
+ for(const action of ['clawchat-local','clawchat-cloud','cloud-add','clawchat']){
+  const e=event({visitor_id:visitor,event:'link_click',action});
+  assert.equal((await post(env,e)).status,202);await post(env,e);await post(env,{...e,event_id:crypto.randomUUID()});
+ }
+ sql.exec("UPDATE events SET occurred_at="+Date.parse('2026-10-10T12:00:00+08:00'));
+ const query=view=>worker.fetch(new Request(origin+'/api/stats?from=2026-10-10&to=2026-10-11'+view,{headers:{Authorization:'Bearer test-only-read-key'}}),env);
+ const d=await(await query('')).json();assert.equal(d.summary.download_clicks,0);
+ assert.deepEqual(d.deployment_clicks.cloud.add,{clicks:2,visitors:1});
+ assert.deepEqual(d.deployment_clicks.cloud.clawchat,{clicks:2,visitors:1});
+ assert.deepEqual(d.deployment_clicks.local.clawchat,{clicks:2,visitors:1});
+ assert.deepEqual((await(await query('&view=dashboard')).json()).deployment_clicks,d.deployment_clicks);
+ assert.equal(sql.prepare('SELECT count(*) n FROM events').get().n,8);
+ assert.equal((await post(env,event({event:'link_click',action:'cloud-add',result:'created'}))).status,400);
+});

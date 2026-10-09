@@ -4,6 +4,18 @@
 
 ## 推荐：精简看板接口
 
+### 部署入口统计
+
+2026-10-09 新口径复用 `POST /api/events` 和现有事件表，不迁移或改写历史记录。
+`link_click` 新增三个白名单 action：`clawchat-local`、`clawchat-cloud`、`cloud-add`。
+本地安装帮助只记录本地入口；云端主下载按钮及六个备用下载链接记录云端入口；添加按钮及分享页回退链接记录添加意图。
+一次点击只有一个事件，重试使用同一 event_id。下载、登录、唤起应用和创建成功不是同一事件。
+
+两种查询视图均新增 `deployment_clicks`：包含采集起点、首个完整日、实际范围、当前 agent_code，以及 `local.clawchat`、`cloud.clawchat`、`cloud.add` 的 `clicks`/`visitors`。
+上线前为 `not_collected`，数字为 null；跨上线日期或含上线当日为 `partial`；首个完整日为 2026-10-10。
+旧 `clawchat` 混合记录保留在 actions，不归入任何一个新入口。实例创建结果由 Nest 日报单独提供，点击不能证明创建成功。
+上线验收前不得将本地源码或日期常量当作已经接通正式统计的证据。
+
 使用同一查询密钥，请求 `GET /api/stats?from=YYYY-MM-DD&to=YYYY-MM-DD&view=dashboard`。
 主面板只读取 `summary` 中四个字段，`daily` 提供对应趋势：
 
@@ -17,7 +29,7 @@
 `platforms` 提供 Windows、Mac Apple、Mac Intel 的点击与有效请求访客数，不能相加作为全站人数。
 `diagnostics` 仅供排查：`raw_download_clicks` 原始点击次数、`ready_requests` 有效请求次数、`failed_requests` 失败次数，以及 `failures` 按平台和原因细分。不放在主指标卡上。
 
-这个视图不展示旧解析状态、direct/fallback，也不展示未接入的创建/安装指标；没有新增埋点或另存一套汇总数据。不传 view 的原接口和历史事件保留，已有看板不会因字段删除中断。
+这个视图不展示旧解析状态、direct/fallback，也不展示未接入的创建/安装指标；部署入口的新埋点见上文，不另存一套汇总数据。不传 view 的原接口和历史事件保留。
 
 “有效下载请求”仍由浏览器上报，只说明安装包地址已经验证并发起导航，不能改名为下载完成或安装成功。新口径没有历史回填，上线前的零值不能解释为请求全部失败。
 
@@ -30,7 +42,7 @@
 - 必填参数：`from=YYYY-MM-DD`、`to=YYYY-MM-DD`，包含起止两天，最多 93 天。
 - 时区：Asia/Shanghai，按每天 00:00–24:00 统计。
 - 可选筛选：`channel`（来源渠道）和 `hostname`（来源站点）。
-- 建议看板每 5 分钟查询一次；接口不缓存，事件写入后可查。
+- 看板和汇总缓存每 30 分钟更新。额度耗尽时复用相同查询条件的上次成功结果，保留原时间；没有缓存时返回不可用，不补零。
 
 ```python
 import os
@@ -61,11 +73,11 @@ print(data['summary'])
 | `daily[]` | 每天的上述指标；没有事件的日期补零 |
 | `actions[]` | 按 event + action + platform 分组，包含 `count` 次数、`visitors` 独立访客数；供按钮看板使用 |
 | `events[]` | 在 actions 基础上按 result 细分，供成功解析/失败/回退排查 |
-| `unavailable.create_click_visitors` | `{value:null,status:"entry_removed"}`，当前无云端创建入口 |
+| `deployment_clicks` | 本地与云端独立的入口点击统计，旧口径不回填 |
 | `unavailable.create_success_users` | `{value:null,status:"not_integrated"}`，未对接创建结果 |
 | `unavailable.install_success_devices` | `{value:null,status:"not_integrated"}`，未对接启动器安装结果 |
 
-`null` 必须展示“未接入”或“入口已移除”，不可显示成 0。历史未采集的数据不会被补造；上线前日期查询为零，仅代表没有记录。
+`null` 必须按状态展示未接入或未采集，不可显示成 0。历史未采集的数据不会被补造；旧口径上线前日期查询为零，仅代表没有记录。
 
 以下仅为示例，不是真实业务数据：
 
@@ -81,7 +93,6 @@ print(data['summary'])
   "actions": [{"event":"download_click","action":"windows","platform":"windows","count":20,"visitors":16}],
   "events": [{"event":"download_click","action":"windows","platform":"windows","result":"direct","count":18,"visitors":15}],
   "unavailable": {
-    "create_click_visitors":{"value":null,"status":"entry_removed"},
     "create_success_users":{"value":null,"status":"not_integrated"},
     "install_success_devices":{"value":null,"status":"not_integrated"}
   }
@@ -100,7 +111,7 @@ print(data['summary'])
 | download_failed | windows / mac-arm64 / mac-x64 | rate_limited / http_error / timeout / invalid_response / network_error |
 | installer_resolve | installers | latest / previous_complete / http_error / timeout / network_error / no_complete_release / invalid_response |
 | help_open | installation / faq-relationship / faq-next / faq-failure | 每次从关闭到展开记录一次 |
-| link_click | clawchat / pairing / install-guide / github-fallback / source | ClawChat 下载站、配对说明、完整指南、备用下载、源码入口 |
+| link_click | clawchat-local / clawchat-cloud / cloud-add / pairing / install-guide / github-fallback / source | 本地 ClawChat、云端 ClawChat、添加诺拉、配对说明、完整指南、备用下载、源码入口；旧 clawchat 仅兼容历史 |
 
 `clawchat` 是进入 ClawChat 下载页面，不等于已经下载应用。`pairing` 是查看配对指引，不等于配对成功。`direct` 也只表示按钮目标为安装包，不代表文件下载完成。
 

@@ -39,6 +39,7 @@
     const status = card.querySelector('#nr-add-status');
     status.replaceChildren(document.createTextNode('未打开 ClawChat？请先安装，或 '));
     const link = document.createElement('a');
+    link.dataset.entryAction = 'cloud-add';
     link.href = share;
     link.textContent = '打开诺拉分享页 ↗';
     link.target = '_blank';

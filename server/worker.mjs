@@ -1,5 +1,6 @@
 import {download,refreshInstallers} from './downloads.mjs';
 import {aggregateRead} from './aggregate-cache.mjs';
+import {deploymentClicks} from './deployment-clicks.mjs';
 import {collectLauncher,launcherStats} from './launcher.mjs';
 import {collectOperationLogs,operationLogs} from './launcher-logs.mjs';
 const ORIGINS = new Set(['https://noratavern.com', 'https://lovemaker-art.github.io']);
@@ -9,7 +10,7 @@ const ALLOWED = {
  download_ready: ['windows','mac-arm64','mac-x64'],
  download_failed: ['windows','mac-arm64','mac-x64'],
  help_open: ['installation','faq-relationship','faq-next','faq-failure'],
- link_click: ['clawchat','pairing','install-guide','github-fallback','source'],
+ link_click: ['clawchat','clawchat-local','clawchat-cloud','cloud-add','pairing','install-guide','github-fallback','source'],
  installer_resolve: ['installers']
 };
 const DAY = 86400000;
@@ -69,7 +70,8 @@ async function stats(request,env) {
  ]);
  const days=new Map(daily.results.map(r=>[r.date,r]));const filled=[];
  for(let n=start;n<end;n+=DAY){const date=new Date(n+8*3600000).toISOString().slice(0,10);filled.push(days.get(date)||{date,pv:0,uv:0,download_clicks:0,download_visitors:0,download_ready_requests:0,download_ready_visitors:0,download_failed_requests:0});}
- // Project the same aggregates into a small dashboard contract; no extra event collection.
+ const deployment=deploymentClicks(actions.results,from,to);
+ // Both response views reuse the existing action aggregates.
  if(view==='dashboard'){
   const primary=r=>({pv:r.pv,uv:r.uv,download_click_visitors:r.download_visitors,download_ready_visitors:r.download_ready_visitors});
   const platforms=['windows','mac-arm64','mac-x64'].map(platform=>{
@@ -78,12 +80,12 @@ async function stats(request,env) {
   });
   return json({schema_version:2,timezone:'Asia/Shanghai',from,to,generated_at:new Date().toISOString(),
    identity:'anonymous_browser_per_origin',measurement:{download_ready:'browser_received_valid_installer_url_not_file_completion',history:'new_outcomes_not_backfilled'},
-   summary:primary(summary.results[0]),daily:filled.map(r=>({date:r.date,...primary(r)})),platforms,
+   summary:primary(summary.results[0]),daily:filled.map(r=>({date:r.date,...primary(r)})),platforms,deployment_clicks:deployment,
    diagnostics:{raw_download_clicks:summary.results[0].download_clicks,ready_requests:summary.results[0].download_ready_requests,
     failed_requests:summary.results[0].download_failed_requests,
     failures:events.results.filter(r=>r.event==='download_failed').map(r=>({platform:r.platform,reason:r.result,count:r.count,visitors:r.visitors}))}});
  }
- return json({schema_version:2,timezone:'Asia/Shanghai',from,to,generated_at:new Date().toISOString(),identity:'anonymous_browser_per_origin',measurement:{download_ready:'browser_received_valid_installer_url_not_file_completion',history:'new_outcomes_not_backfilled',timestamp:'client_event_time_when_supplied_otherwise_receipt_time'},summary:summary.results[0],daily:filled,events:events.results,actions:actions.results,unavailable:{create_click_visitors:{value:null,status:'entry_removed'},create_success_users:{value:null,status:'not_integrated'},install_success_devices:{value:null,status:'not_integrated'}}});
+ return json({schema_version:2,timezone:'Asia/Shanghai',from,to,generated_at:new Date().toISOString(),identity:'anonymous_browser_per_origin',measurement:{download_ready:'browser_received_valid_installer_url_not_file_completion',history:'new_outcomes_not_backfilled',timestamp:'client_event_time_when_supplied_otherwise_receipt_time'},summary:summary.results[0],daily:filled,events:events.results,actions:actions.results,deployment_clicks:deployment,unavailable:{create_success_users:{value:null,status:'not_integrated'},install_success_devices:{value:null,status:'not_integrated'}}});
 }
 export default {async scheduled(event,env,ctx) {ctx.waitUntil(refreshInstallers(env));}, async fetch(request,env,ctx) {
  const url=new URL(request.url);if(!url.pathname.startsWith('/api/'))return env.ASSETS.fetch(request);

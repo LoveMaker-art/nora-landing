@@ -18,7 +18,7 @@ function harness(code, userAgent = 'Windows') {
   vm.runInNewContext(source, {
     document: {
       querySelector: () => ({dataset: {agentCode: code}, querySelector: node}),
-      createTextNode: text => text, createElement: () => ({})
+      createTextNode: text => text, createElement: () => ({dataset:{}})
     },
     navigator: {userAgent, maxTouchPoints: 0, clipboard: {writeText: async () => {}}},
     window: {location}, encodeURIComponent
@@ -41,6 +41,7 @@ test('app action, web fallback and copy use the same confirmed code', async () =
   h.node('#nr-add').listeners.click();
   assert.equal(h.location.href, 'clawchat://shared-agent?code=' + code);
   assert.equal(h.node('#nr-add-status').child.href, 'https://clawling.com/zh/nest/share/' + code);
+  assert.equal(h.node('#nr-add-status').child.dataset.entryAction,'cloud-add');
   assert.equal(h.node('[data-cloud-share]').href, h.node('#nr-add-status').child.href);
   assert.equal(h.node('[data-agent-code]').textContent, code);
   await h.node('[data-copy]').listeners.click();
