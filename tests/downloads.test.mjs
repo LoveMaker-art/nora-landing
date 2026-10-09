@@ -26,9 +26,13 @@ test('fresh cached address responds immediately without GitHub request',async()=
  assert.equal(r.status,200);assert.equal((await r.json()).url,url);assert.equal(calls,0);
  assert.equal(r.headers.get('Access-Control-Allow-Origin'),'https://lovemaker-art.github.io');
 });
-test('cold start verifies seed even when release API fails; never redirects to tag',async()=>{
- const env=database();const r=await download(req(),env,null,{now:NOW,fetcher:async(u,o)=>new Response(null,{status:o.method==='HEAD'?200:403})});
- assert.equal(r.status,302);assert.equal(r.headers.get('Location'),seed.windows.url);
+test('cold start verifies seed even when release API fails; serves a file instead of redirecting to a tag',async()=>{
+ const env=database();const r=await download(req(),env,null,{now:NOW,fetcher:async(u,o)=>{
+  if(o.method==='HEAD')return new Response(null,{status:200});
+  if(u===seed.windows.url)return new Response(new Uint8Array([77,90,1]),{headers:{'Content-Type':'application/octet-stream'}});
+  return new Response(null,{status:403});
+ }});
+ assert.equal(r.status,200);assert.equal(r.headers.get('Location'),null);assert.deepEqual(new Uint8Array(await r.arrayBuffer()),new Uint8Array([77,90,1]));
 });
 for (const failure of ['read','write','missing']) test(`verified installers remain downloadable when database ${failure} fails`,async()=>{
  const latest=release(),env=failure==='missing'?{}:{DB:{prepare(){return {bind(){return {

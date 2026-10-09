@@ -10,7 +10,7 @@
   return [link.dataset.installer,{link,attempted:false,remaining:0}];
  }));
  const frame=document.createElement('iframe');frame.hidden=true;frame.title='安装包下载';frame.referrerPolicy='no-referrer';document.body.append(frame);
- let busy=false,selected;
+ let busy=false,selected,delivery;
  function render(card,state){
   if(state==='pending')card.link.setAttribute('aria-busy','true');else card.link.removeAttribute('aria-busy');
  }
@@ -26,6 +26,14 @@
   if(card.remaining>0)setTimeout(()=>{card.remaining--;countdown(card);},1000);
  }
  function report(event,platform,result){try{window.dispatchEvent(new CustomEvent('nora:download-outcome',{detail:{event,platform,result}}));}catch{}}
+ window.addEventListener('message',event=>{
+  const data=event.data;
+  if(!delivery||event.origin!==delivery.origin||event.source!==frame.contentWindow
+   ||data?.type!=='nora:download-transfer'||data.platform!==delivery.platform||data.asset!==delivery.asset||data.error!=='download_unavailable')return;
+  const platform=delivery.platform,card=cards.get(platform);delivery=null;
+  selected=card;card.remaining=30;render(card,'idle');
+  report('download_failed',platform,'http_error');countdown(card);
+ });
  async function start(platform){
   const card=cards.get(platform);if(busy||card.remaining>0)return;
   selected=card;const force=card.attempted;card.attempted=true;busy=true;render(card,'pending');controls();
@@ -42,8 +50,11 @@
    const [tag,name,...rest]=root?target.pathname.slice(root.length).split('/'):[];
    if(!root||!target.pathname.startsWith(root)||target.username||target.password||target.search||target.hash
     ||rest.length||!/^v\d+\.\d+\.\d+$/.test(tag)||!new RegExp('^Nora-Tavern-Launcher-\\d+\\.\\d+\\.\\d+'+suffix.replaceAll('.','\\.')+'$').test(name))throw new Error('invalid_download');
-   frame.src=target.href;report('download_ready',platform,'ready');render(card,'idle');
-   say(`已发起 ${names[platform]} 下载，请查看浏览器下载列表。`);
+   const transfer=new URL(card.link.href);transfer.search='';
+   const asset=tag+'/'+name;transfer.searchParams.set('asset',asset);
+   delivery={platform,asset,origin:transfer.origin};
+   frame.src=transfer.href;report('download_ready',platform,'ready');render(card,'idle');
+   say(`已提交 ${names[platform]} 下载请求，请稍候并查看浏览器下载列表。`);
   }catch(error){
    const reason=error.status===429?'rate_limited':error.status?'http_error':error.name==='TimeoutError'||error.name==='AbortError'?'timeout':error.message==='invalid_download'||error instanceof SyntaxError?'invalid_response':'network_error';
    report('download_failed',platform,reason);

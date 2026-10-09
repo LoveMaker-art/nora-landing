@@ -152,6 +152,98 @@ export async function refreshInstallers(env,fetcher=fetch) {
  const results=await Promise.allSettled(Object.keys(patterns).map(p=>resolveInstaller(env,p,{force:true,fetcher})));
  results.forEach((r,i)=>{if(r.status==='rejected')console.error('Installer check:',Object.keys(patterns)[i],r.reason.message);});
 }
+// Resolve the release once, then change only the host if file delivery fails.
+// Only the first bytes are read before forwarding: large DMGs are never buffered.
+function deliveryError(platform,asset,headers) {
+ const data={type:'nora:download-transfer',platform,asset,error:'download_unavailable'};
+ const nonce=crypto.randomUUID().replaceAll('-','');
+ const script=`const data=${JSON.stringify(data)};if(parent!==window){parent.postMessage(data,'https://noratavern.com');parent.postMessage(data,'https://lovemaker-art.github.io');}`;
+ return new Response(`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>暂时无法下载</title><p>暂时无法获取安装包，请返回下载页面，30秒后再次点击原下载按钮。</p><script nonce="${nonce}">${script}</script></html>`,{
+  status:503,headers:{...headers,'Retry-After':'30','Content-Type':'text/html; charset=utf-8',
+   'Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; frame-ancestors https://noratavern.com https://lovemaker-art.github.io`}
+ });
+}
+async function transferInstaller(request,platform,asset,headers,{fetcher=fetch,transferTimeoutMs=8000}={}) {
+ const github=asset.url.replace(SF_BASE,BASE),mirror=github.replace(BASE,SF_BASE);
+ const name=new URL(github).pathname.split('/').at(-1);
+ const range=request.headers.get('Range');
+ const parts=range&&/^bytes=(\d*)-(\d*)$/.exec(range);
+ if(range&&(!parts||(!parts[1]&&!parts[2])||[parts[1],parts[2]].some(n=>n&&!Number.isSafeInteger(Number(n)))
+  ||(parts[1]&&parts[2]&&Number(parts[1])>Number(parts[2]))||(!parts[1]&&Number(parts[2])===0))) {
+  return Response.json({error:'invalid_range'},{status:416,headers});
+ }
+ const sourceHeaders={'Accept-Encoding':'identity',Accept:'application/octet-stream'};
+ if(range)sourceHeaders.Range=range;
+ else if(request.method==='HEAD')sourceHeaders.Range='bytes=0-0';
+ for(const url of [mirror,github]) {
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(new Error('download_timeout')),transferTimeoutMs);
+  let reader,response;
+  try {
+   response=await readFile(fetcher,url,{method:'GET',headers:sourceHeaders,redirect:'follow',signal:AbortSignal.any([request.signal,controller.signal])});
+   const type=response.headers.get('Content-Type')||'';
+   if(![200,206].includes(response.status)||!/^application\/(octet-stream|x-msdownload|vnd\.microsoft\.portable-executable|x-apple-diskimage|x-download)(?:;|$)/i.test(type)||!response.body)
+    throw new Error('invalid_file_response');
+   const contentRange=response.headers.get('Content-Range');
+   const span=contentRange&&/^bytes (\d+)-(\d+)\/(\d+)$/.exec(contentRange);
+   if(response.status===206&&(!sourceHeaders.Range||!span||Number(span[1])>Number(span[2])||Number(span[2])>=Number(span[3])))throw new Error('invalid_range_response');
+   if(response.status===206&&parts) {
+    const total=Number(span[3]),start=parts[1]?Number(parts[1]):Math.max(0,total-Number(parts[2]));
+    const end=parts[1]?(parts[2]?Math.min(Number(parts[2]),total-1):total-1):total-1;
+    if(Number(span[1])!==start||Number(span[2])!==end)throw new Error('invalid_range_response');
+   }
+   reader=response.body.getReader();
+   const first=[];let size=0;
+   // A response can have valid headers and fail before its first body chunk.
+   const inspectBytes=platform==='windows'?2:64;
+   while(size<inspectBytes) {
+    const part=await reader.read();if(part.done)break;
+    if(part.value.length){first.push(part.value);size+=part.value.length;}
+   }
+   if(!size)throw new Error('empty_file');
+   const advertised=response.headers.get('Content-Length');
+   const length=advertised!==null?Number(advertised):span?Number(span[2])-Number(span[1])+1:null;
+   if(length!==null&&(!Number.isSafeInteger(length)||length<size||length<=0))throw new Error('invalid_file_length');
+   const startsAtZero=response.status===200||Number(span?.[1])===0;
+   const prefix=new Uint8Array(Math.min(size,64));let offset=0;
+   for(const chunk of first){const portion=chunk.subarray(0,prefix.length-offset);prefix.set(portion,offset);offset+=portion.length;if(offset===prefix.length)break;}
+   if(startsAtZero&&/^\s*(?:<!doctype\s+html|<html\b|<head\b|<body\b|[\{\[]\s*["\{\[])/i.test(new TextDecoder().decode(prefix)))throw new Error('error_page');
+   if(startsAtZero&&platform==='windows'&&request.method!=='HEAD'&&(prefix[0]!==77||(prefix.length>1?prefix[1]!==90:response.status===200)))throw new Error('invalid_executable');
+   clearTimeout(timer); // Preparation deadline must not abort a long, healthy transfer.
+   const outgoing={...headers,'Content-Type':type,'Content-Disposition':`attachment; filename="${name}"`,
+    'X-Nora-Download-Source':url===mirror?'sourceforge':'github'};
+   if(length!==null)outgoing['Content-Length']=String(length);
+   if(response.headers.has('Accept-Ranges')||response.status===206)outgoing['Accept-Ranges']='bytes';
+   if(request.method==='HEAD') {
+    if(span)outgoing['Content-Length']=span[3];
+    await reader.cancel();controller.abort();
+    return new Response(null,{status:200,headers:outgoing});
+   }
+   if(response.status===206)outgoing['Content-Range']=contentRange;
+   let body=new ReadableStream({
+    async pull(destination) {
+     try {
+      if(first.length){destination.enqueue(first.shift());return;}
+      const part=await reader.read();
+      if(part.done){destination.close();reader.releaseLock();}
+      else destination.enqueue(part.value);
+     }catch(error){destination.error(error);controller.abort();}
+    },
+    async cancel(reason){controller.abort();await reader.cancel(reason).catch(()=>{});}
+   });
+   // Workers ignores a manually assigned length on a generic stream. A fixed
+   // stream keeps browser progress accurate and detects truncated transfers.
+   if(length!==null&&typeof globalThis.FixedLengthStream==='function')body=body.pipeThrough(new globalThis.FixedLengthStream(length));
+   return new Response(body,{status:response.status,headers:outgoing});
+  }catch {
+   clearTimeout(timer);controller.abort();
+   if(reader)await reader.cancel().catch(()=>{});
+   else await response?.body?.cancel().catch(()=>{});
+   if(request.signal.aborted)break;
+  }
+ }
+ return deliveryError(platform,new URL(github).pathname.slice('/LoveMaker-art/noras-tavern/releases/download/'.length),headers);
+}
 export async function download(request,env,ctx,options={}) {
  const u=new URL(request.url),platform=u.pathname.slice('/api/download/'.length);
  const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
@@ -161,12 +253,19 @@ export async function download(request,env,ctx,options={}) {
  if(!Object.hasOwn(patterns,platform))return json({error:'unknown_platform'},404);
  if(!['GET','HEAD'].includes(request.method))return json({error:'method_not_allowed'},405);
  try {
+  // A pinned filename supplied by the page cannot become a general proxy: the
+  // only destinations are this repository and its identical SourceForge path.
+  if(u.searchParams.has('asset')) {
+   const asset={url:BASE+u.searchParams.get('asset'),published:'2000-01-01T00:00:00Z'};
+   if(u.searchParams.has('format')||!valid(platform,asset))return json({error:'invalid_asset'},400);
+   return await transferInstaller(request,platform,asset,headers,options);
+  }
   const result=await resolveInstaller(env,platform,{...options,force:u.searchParams.get('retry')==='1'});
   if(u.searchParams.get('format')==='json')return json({...result,platform},200);
-  return new Response(null,{status:302,headers:{...headers,Location:result.url}});
+  return await transferInstaller(request,platform,result,headers,options);
  }catch(error){
   const retry=error.retryAfter||30;headers['Retry-After']=String(retry);
   if(u.searchParams.get('format')==='json')return json({error:error.message==='check_cooldown'?'check_cooldown':'download_unavailable',retryAfter:retry},error.retryAfter?429:503);
-  return new Response(request.method==='HEAD'?null:'暂时无法获取安装包，请返回下载页面，稍后点击“重新检查下载”。',{status:503,headers:{...headers,'Content-Type':'text/plain; charset=utf-8'}});
+  return json({error:'download_unavailable',retryAfter:retry},503);
  }
 }
