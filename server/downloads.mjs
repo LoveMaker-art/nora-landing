@@ -4,6 +4,8 @@ const API='https://api.github.com/repos/LoveMaker-art/noras-tavern/releases';
 const SF_BASE='https://downloads.sourceforge.net/project/nora-tavern/';
 const patterns={windows:/^Nora-Tavern-Launcher-[\d.]+-win-x64-setup\.exe$/, 'mac-arm64':/^Nora-Tavern-Launcher-[\d.]+-mac-arm64\.dmg$/, 'mac-x64':/^Nora-Tavern-Launcher-[\d.]+-mac-x64\.dmg$/};
 const FRESH=15*60*1000, GRACE=24*60*60*1000, COOLDOWN=30000;
+// The five-release page measured on 2026-10-11 fits the unchanged 1 MiB read cap.
+const RELEASE_PAGE_SIZE=5, RELEASE_HISTORY=300, VERIFIED_HISTORY=100, INSTALLER_PROBES=18;
 const pendingChecks=new WeakMap();
 function valid(platform,asset) {
  if(!asset||!Number.isFinite(Date.parse(asset.published)))return false;
@@ -116,17 +118,21 @@ async function checkInstaller(env,platform,{force,fetcher,now}) {
  if(await probe(primary))verified=primary;
  // Search alternatives too: the first matching release can itself contain a dead asset.
  try {
-  for(let page=1;page<=3&&!githubDeadline.aborted;page++) {
-   const r=await fetcher(`${API}?per_page=100&page=${page}`,{headers:{'User-Agent':'Nora-Landing-Downloads','Accept':'application/vnd.github+json'},signal:AbortSignal.any([deadline,githubDeadline,AbortSignal.timeout(5000)])});
+  let candidateChecks=0;
+  for(let page=1;page<=RELEASE_HISTORY/RELEASE_PAGE_SIZE&&!githubDeadline.aborted;page++) {
+   const r=await fetcher(`${API}?per_page=${RELEASE_PAGE_SIZE}&page=${page}`,{headers:{'User-Agent':'Nora-Landing-Downloads','Accept':'application/vnd.github+json'},signal:AbortSignal.any([deadline,githubDeadline,AbortSignal.timeout(5000)])});
    if(!r.ok)throw new Error('release_query_failed');
    const releases=await smallJson(r);if(!Array.isArray(releases))throw new Error('invalid_releases');
-   for(const asset of installerCandidates(releases,platform).slice(0,6)) {
+   let discovered=false;
+   for(const asset of installerCandidates(releases,platform).slice(0,Math.min(6,INSTALLER_PROBES-candidateChecks))) {
     if(verified&&Date.parse(asset.published)<=Date.parse(verified.published))continue;
-    if(await probe(asset)){verified=asset;break;}
+    candidateChecks++;
+    if(await probe(asset)){verified=asset;discovered=true;break;}
     const alternate=mirrorAsset(asset);
-    if(await probe(alternate)){verified=alternate;break;}
+    if(await probe(alternate)){verified=alternate;discovered=true;break;}
    }
-   if(verified||releases.length<100)break;
+   // A healthy saved address must not stop the scan after only five component releases.
+   if(discovered||releases.length<RELEASE_PAGE_SIZE||candidateChecks>=INSTALLER_PROBES||(verified&&page*RELEASE_PAGE_SIZE>=VERIFIED_HISTORY))break;
   }
   githubFailed=githubDeadline.aborted;
  }catch{githubFailed=true;}
