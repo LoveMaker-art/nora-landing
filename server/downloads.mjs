@@ -209,7 +209,7 @@ async function transferInstaller(request,platform,asset,headers,{fetcher=fetch,t
  const sourceHeaders={'Accept-Encoding':'identity',Accept:'application/octet-stream'};
  if(range)sourceHeaders.Range=range;
  else if(request.method==='HEAD')sourceHeaders.Range='bytes=0-0';
- for(const url of [github.replace(BASE,JIHU_BASE),mirror,github]) {
+ for(const url of [github.replace(BASE,JIHU_BASE),github,mirror]) {
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(new Error('download_timeout')),transferTimeoutMs);
   let reader,response;
