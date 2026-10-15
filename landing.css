@@ -114,3 +114,15 @@
 /* Feedback stays in one text line; platform cards keep their original appearance. */
 .installer-link[aria-disabled="true"]{cursor:wait}
 #start.compact-deployment .installer-status{min-height:3.4em;max-width:100%;text-align:left}
+
+/* A quiet, independent alternative below the three primary downloads. */
+.backup-download{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:12px;padding-top:12px;border-top:1px solid #eee8f3;font-size:13px}
+.backup-download-link{display:inline-flex;align-items:center;gap:7px;color:#685183;text-decoration:none;font-weight:500;min-height:36px}
+.backup-download-link svg{width:18px;height:18px;flex-shrink:0}
+.backup-download-link:hover{color:#493369;text-decoration:underline}
+.backup-release{font-size:12px;color:#81758b}
+.backup-access{display:flex;align-items:center;gap:9px;margin-left:auto;color:#81758b;min-height:36px}
+.backup-access code{color:#51405f;font-size:13px;letter-spacing:.5px;user-select:all}
+.backup-copy{min-width:60px;min-height:36px;padding:4px 11px;border:1px solid #dfd5e9;border-radius:7px;background:#fff;color:#6a5189;font-size:12px;line-height:1.5}
+.backup-copy:hover{background:#f6f2fa;border-color:#b4a0cc}
+@media(max-width:480px){.backup-download{column-gap:10px;row-gap:2px}.backup-access{margin-left:0;flex-basis:100%;justify-content:flex-start}.backup-copy{min-height:40px}}
