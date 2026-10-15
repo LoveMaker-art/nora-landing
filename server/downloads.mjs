@@ -1,6 +1,8 @@
 import seed from './installer-seed.json' with {type:'json'};
 const BASE='https://github.com/LoveMaker-art/noras-tavern/releases/download/';
 const API='https://api.github.com/repos/LoveMaker-art/noras-tavern/releases';
+const JIHU_BASE='https://jihulab.com/api/v4/projects/378185/packages/generic/nora-tavern/';
+const JIHU_STABLE='https://jihulab.com/LoveMaker-art/nora-tavern/-/raw/main/channels/stable.json';
 const SF_BASE='https://downloads.sourceforge.net/project/nora-tavern/';
 const patterns={windows:/^Nora-Tavern-Launcher-[\d.]+-win-x64-setup\.exe$/, 'mac-arm64':/^Nora-Tavern-Launcher-[\d.]+-mac-arm64\.dmg$/, 'mac-x64':/^Nora-Tavern-Launcher-[\d.]+-mac-x64\.dmg$/};
 const FRESH=15*60*1000, GRACE=24*60*60*1000, COOLDOWN=30000;
@@ -14,6 +16,12 @@ function valid(platform,asset) {
  }catch{return false;}
 }
 function mirrorAsset(asset) {return {...asset,url:asset.url.replace(BASE,SF_BASE)};}
+function currentEnough(asset,reference) {
+ const version=a=>a.url.split('/').at(-2).slice(1).split('.').map(Number);
+ const a=version(asset),b=version(reference);
+ for(let i=0;i<3;i++)if(a[i]!==b[i])return a[i]>b[i];
+ return true;
+}
 export function installerCandidates(releases,platform,{mirror=false}={}) {
  return releases.filter(r=>!r.draft&&!r.prerelease&&/^v\d+\.\d+\.\d+$/.test(r.tag_name))
  .sort((a,b)=>Date.parse(b.published_at)-Date.parse(a.published_at)).flatMap(r=>(r.assets||[])
@@ -56,7 +64,7 @@ async function smallJson(response) {
 }
 // Verified addresses remain reusable even when analytics storage is unavailable.
 export async function resolveInstaller(env,platform,{force=false,fetcher=fetch,now=Date.now(),cache=globalThis.caches?.default}={}) {
- const key='https://noratavern.com/__nora_cache/installer-v1/'+platform;
+ const key='https://noratavern.com/__nora_cache/installer-v2/'+platform;
  if(cache&&!force)try{
   const response=await cache.match(key),saved=response&&await response.json();
   if(saved&&valid(platform,saved)&&saved.checked_at<=now&&now-saved.checked_at<FRESH)return {url:saved.url,source:'edge_cache'};
@@ -81,7 +89,7 @@ async function checkInstaller(env,platform,{force,fetcher,now}) {
   try{return await operation(db);}catch{db=null;console.warn('Installer storage unavailable; verifying official download sources.');}
  };
  const saved=await stored(db=>row(db,'SELECT * FROM installer_links WHERE platform=?',platform));
- const current=valid(platform,saved)?saved:{...seed[platform],checked_at:0};
+ const current=valid(platform,saved)&&currentEnough(saved,seed[platform])?saved:{...seed[platform],checked_at:0};
  const health=await stored(db=>row(db,'SELECT * FROM installer_health WHERE url=?',current.url));
  const recentlyGood=()=>health?.state!=='missing'&&current.checked_at>0&&now-current.checked_at<GRACE;
  if(!force&&recentlyGood()&&now-current.checked_at<FRESH)return {url:current.url,published:current.published,checked_at:current.checked_at,source:'cache'};
@@ -111,22 +119,43 @@ async function checkInstaller(env,platform,{force,fetcher,now}) {
   if(asset.url===current.url&&state==='missing')currentMissing=true;
   seen.set(asset.url,state==='healthy');return state==='healthy';
  };
- let verified,githubFailed=false;
+ let verified,githubFailed=false,metadataConfirmed=false;
+ // The product and website follow the same published domestic stable catalogue.
+ // Keep the GitHub URL as canonical identity so existing page links stay valid.
+ try {
+  const r=await fetcher(JIHU_STABLE,{signal:AbortSignal.any([deadline,AbortSignal.timeout(5000)])});
+  if(!r.ok)throw new Error('release_query_failed');
+  const release=await smallJson(r);
+  if(!release||Array.isArray(release)||!Array.isArray(release.assets)
+    ||release.assets.some(a=>!/^sha256:[a-f0-9]{64}$/.test(a.digest||'')))throw new Error('invalid_releases');
+  for(const asset of installerCandidates([release],platform)) {
+   const domestic={...asset,url:asset.url.replace(BASE,JIHU_BASE)};
+   if(await probe(domestic)) {
+    await stored(db=>save(db,platform,asset,now));
+    return {...asset,checked_at:now,source:'jihu_stable'};
+   }
+  }
+ }catch{/* The official GitHub and SF catalogues remain usable independently. */}
  const primary={...current,url:current.url.replace(SF_BASE,BASE)};
  if(await probe(primary))verified=primary;
  // Search alternatives too: the first matching release can itself contain a dead asset.
  try {
-  for(let page=1;page<=3&&!githubDeadline.aborted;page++) {
-   const r=await fetcher(`${API}?per_page=100&page=${page}`,{headers:{'User-Agent':'Nora-Landing-Downloads','Accept':'application/vnd.github+json'},signal:AbortSignal.any([deadline,githubDeadline,AbortSignal.timeout(5000)])});
+  // Query latest directly: release history with many assets can exceed 1 MiB.
+  // Scan small history pages only when the latest release has no usable binary.
+  let discovered=false;
+  for(let page=0;page<=20&&!githubDeadline.aborted&&!discovered;page++) {
+   const endpoint=page===0?API+'/latest':`${API}?per_page=5&page=${page}`;
+   const r=await fetcher(endpoint,{headers:{'User-Agent':'Nora-Landing-Downloads','Accept':'application/vnd.github+json'},signal:AbortSignal.any([deadline,githubDeadline,AbortSignal.timeout(5000)])});
    if(!r.ok)throw new Error('release_query_failed');
-   const releases=await smallJson(r);if(!Array.isArray(releases))throw new Error('invalid_releases');
+   const data=await smallJson(r),releases=page===0?[data]:data;
+   if(!Array.isArray(releases)||page===0&&(!data||Array.isArray(data)||typeof data.tag_name!=='string'))continue;
    for(const asset of installerCandidates(releases,platform).slice(0,6)) {
-    if(verified&&Date.parse(asset.published)<=Date.parse(verified.published))continue;
-    if(await probe(asset)){verified=asset;break;}
+    if(verified&&Date.parse(asset.published)<Date.parse(verified.published))continue;
+    if(await probe(asset)){verified=asset;discovered=true;metadataConfirmed=true;break;}
     const alternate=mirrorAsset(asset);
-    if(await probe(alternate)){verified=alternate;break;}
+    if(await probe(alternate)){verified=alternate;discovered=true;metadataConfirmed=true;break;}
    }
-   if(verified||releases.length<100)break;
+   if(page>0&&releases.length<5)break;
   }
   githubFailed=githubDeadline.aborted;
  }catch{githubFailed=true;}
@@ -140,10 +169,15 @@ async function checkInstaller(env,platform,{force,fetcher,now}) {
     ||release.assets.some(a=>!/^sha256:[a-f0-9]{64}$/.test(a.digest||'')))throw new Error('invalid_releases');
   for(const asset of installerCandidates([release],platform,{mirror:true})) {
    if(verified&&Date.parse(asset.published)<Date.parse(verified.published))continue;
-   if(await probe(asset)){verified=asset;break;}
+   if(await probe(asset)){verified=asset;metadataConfirmed=true;break;}
   }
  }catch{/* An unchecked or partial backup catalogue never creates a download target. */}
- if(verified){await stored(db=>save(db,platform,verified,now));return {...verified,checked_at:now,source:'verified'};}
+ if(verified){
+  // File availability cannot certify that an old version is still the latest.
+  const checked_at=metadataConfirmed?now:current.checked_at;
+  if(metadataConfirmed)await stored(db=>save(db,platform,verified,now));
+  return {...verified,checked_at,source:metadataConfirmed?'verified':'verified_file'};
+ }
  if(!currentMissing&&recentlyGood())return {url:current.url,published:current.published,checked_at:current.checked_at,source:'recent_cache'};
  throw new Error('download_unavailable');
 }
@@ -175,7 +209,7 @@ async function transferInstaller(request,platform,asset,headers,{fetcher=fetch,t
  const sourceHeaders={'Accept-Encoding':'identity',Accept:'application/octet-stream'};
  if(range)sourceHeaders.Range=range;
  else if(request.method==='HEAD')sourceHeaders.Range='bytes=0-0';
- for(const url of [mirror,github]) {
+ for(const url of [github.replace(BASE,JIHU_BASE),mirror,github]) {
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(new Error('download_timeout')),transferTimeoutMs);
   let reader,response;
@@ -211,7 +245,7 @@ async function transferInstaller(request,platform,asset,headers,{fetcher=fetch,t
    if(startsAtZero&&platform==='windows'&&request.method!=='HEAD'&&(prefix[0]!==77||(prefix.length>1?prefix[1]!==90:response.status===200)))throw new Error('invalid_executable');
    clearTimeout(timer); // Preparation deadline must not abort a long, healthy transfer.
    const outgoing={...headers,'Content-Type':type,'Content-Disposition':`attachment; filename="${name}"`,
-    'X-Nora-Download-Source':url===mirror?'sourceforge':'github'};
+    'X-Nora-Download-Source':url.startsWith(JIHU_BASE)?'jihulab':url===mirror?'sourceforge':'github'};
    if(length!==null)outgoing['Content-Length']=String(length);
    if(response.headers.has('Accept-Ranges')||response.status===206)outgoing['Accept-Ranges']='bytes';
    if(request.method==='HEAD') {
@@ -254,7 +288,7 @@ export async function download(request,env,ctx,options={}) {
  if(!['GET','HEAD'].includes(request.method))return json({error:'method_not_allowed'},405);
  try {
   // A pinned filename supplied by the page cannot become a general proxy: the
-  // only destinations are this repository and its identical SourceForge path.
+  // only destinations are this repository and its identical Jihu/SF paths.
   if(u.searchParams.has('asset')) {
    const asset={url:BASE+u.searchParams.get('asset'),published:'2000-01-01T00:00:00Z'};
    if(u.searchParams.has('format')||!valid(platform,asset))return json({error:'invalid_asset'},400);

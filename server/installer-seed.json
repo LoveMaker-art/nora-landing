@@ -1,14 +1,14 @@
 {
   "windows": {
-    "url": "https://github.com/LoveMaker-art/noras-tavern/releases/download/v2.3.15/Nora-Tavern-Launcher-1.1.2-win-x64-setup.exe",
-    "published": "2026-09-22T04:28:56Z"
+    "url": "https://github.com/LoveMaker-art/noras-tavern/releases/download/v2.5.2/Nora-Tavern-Launcher-2.2.2-win-x64-setup.exe",
+    "published": "2026-10-15T14:53:14Z"
   },
   "mac-arm64": {
-    "url": "https://github.com/LoveMaker-art/noras-tavern/releases/download/v2.3.15/Nora-Tavern-Launcher-1.1.2-mac-arm64.dmg",
-    "published": "2026-09-22T04:28:56Z"
+    "url": "https://github.com/LoveMaker-art/noras-tavern/releases/download/v2.5.2/Nora-Tavern-Launcher-2.2.2-mac-arm64.dmg",
+    "published": "2026-10-15T14:53:14Z"
   },
   "mac-x64": {
-    "url": "https://github.com/LoveMaker-art/noras-tavern/releases/download/v2.3.15/Nora-Tavern-Launcher-1.1.2-mac-x64.dmg",
-    "published": "2026-09-22T04:28:56Z"
+    "url": "https://github.com/LoveMaker-art/noras-tavern/releases/download/v2.5.2/Nora-Tavern-Launcher-2.2.2-mac-x64.dmg",
+    "published": "2026-10-15T14:53:14Z"
   }
 }

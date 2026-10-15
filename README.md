@@ -8,11 +8,11 @@
 
 ## 安装包下载入口
 
-本地下载由 `installers.js` 通过 GitHub Releases API 自动解析，不在页面维护版本号。三个稳定入口为 `#download-windows`、`#download-mac-arm64`、`#download-mac-x64`，项目 README 可长期使用。
+网页的三个稳定入口为 `#download-windows`、`#download-mac-arm64`、`#download-mac-x64`。它们通过 `https://noratavern.com/api/download/:platform` 自动定位安装包，页面不维护版本号。
 
-优先使用最新正式发布中的三平台完整安装包；若最新发布只含组件更新，查找最近 100 条发布中的最新完整安装包。请求失败时明确提示并跳转 GitHub 发布页，不使用写死的旧安装包。
+版本定位优先读取产品同一份极狐 `channels/stable.json`，验证对应平台的正式安装包；失败时查询 GitHub `/releases/latest`，仅在该发布没有可用安装包时扫描小页历史，并保留 SourceForge 目录后备。文件传输优先极狐，然后尝试同标签、同文件名的 SourceForge 和 GitHub 文件；支持单段 Range。下载和统计存储解耦，不依赖用户浏览器访问 GitHub API。
 
-按现有 `v主版本.次版本.修订号` 正式标签及 `Nora-Tavern-Launcher-版本-win-x64-setup.exe`、`-mac-arm64.dmg`、`-mac-x64.dmg` 命名发布即可自动更新。若未来更改文件命名或发布规则，需要同步调整解析规则。
+发布遵循 `v主版本.次版本.修订号` 标签和 `Nora-Tavern-Launcher-版本-win-x64-setup.exe`、`-mac-arm64.dmg`、`-mac-x64.dmg` 命名。后续正式发布更新极狐稳定目录后，网页在缓存刷新时自动跟随，最长缓存 15 分钟。详见 [下载实现与验收](docs/downloads.md)。
 
 ## 自有统计 API
 

@@ -14,7 +14,7 @@ function database(){
  return {sql,DB:{prepare}};
 }
 function put(env,platform='windows',age=1000){const a=seed[platform];env.sql.prepare('INSERT INTO installer_links VALUES(?,?,?,?)').run(platform,a.url,a.published,NOW-age);return a.url;}
-function release(tag='v2.3.18',platform='windows') {const suffix={windows:'win-x64-setup.exe','mac-arm64':'mac-arm64.dmg','mac-x64':'mac-x64.dmg'}[platform];const name=`Nora-Tavern-Launcher-1.2.0-${suffix}`;return {tag_name:tag,published_at:'2026-10-01T00:00:00Z',assets:[{name,state:'uploaded',size:100,browser_download_url:`https://github.com/LoveMaker-art/noras-tavern/releases/download/${tag}/${name}`}]};}
+function release(tag='v2.5.3',platform='windows') {const suffix={windows:'win-x64-setup.exe','mac-arm64':'mac-arm64.dmg','mac-x64':'mac-x64.dmg'}[platform];const name=`Nora-Tavern-Launcher-1.2.0-${suffix}`;return {tag_name:tag,published_at:'2026-10-16T00:00:00Z',assets:[{name,state:'uploaded',size:100,browser_download_url:`https://github.com/LoveMaker-art/noras-tavern/releases/download/${tag}/${name}`}]};}
 const req=(q='')=>new Request('https://noratavern.com/api/download/windows'+q,{headers:{Origin:'https://lovemaker-art.github.io'}});
 test('initial button targets remain usable without waiting for browser JS',()=>{
  const html=readFileSync('index.html','utf8');for(const p of Object.keys(seed))assert.ok(html.includes(`data-installer="${p}" href="https://noratavern.com/api/download/${p}"`));
@@ -25,6 +25,13 @@ test('fresh cached address responds immediately without GitHub request',async()=
  const r=await download(req('?format=json'),env,null,{now:NOW,fetcher:async()=>{calls++;throw Error();}});
  assert.equal(r.status,200);assert.equal((await r.json()).url,url);assert.equal(calls,0);
  assert.equal(r.headers.get('Access-Control-Allow-Origin'),'https://lovemaker-art.github.io');
+});
+test('same release uses its cache even when Jihu and GitHub publish timestamps differ',async()=>{
+ const env=database(),url=seed.windows.url;
+ const latest={tag_name:'v2.5.2',published_at:'2026-10-15T13:44:08Z',assets:[{name:url.split('/').at(-1),state:'uploaded',size:100,digest:'sha256:'+'a'.repeat(64),browser_download_url:url}]};
+ await resolveInstaller(env,'windows',{now:NOW,fetcher:async(u,o)=>o.method==='HEAD'?new Response(null):Response.json(latest)});
+ const cached=await resolveInstaller(env,'windows',{now:NOW+1000,fetcher:async()=>assert.fail('same published version should be cached')});
+ assert.equal(cached.url,url);
 });
 test('cold start verifies seed even when release API fails; serves a file instead of redirecting to a tag',async()=>{
  const env=database();const r=await download(req(),env,null,{now:NOW,fetcher:async(u,o)=>{
@@ -87,6 +94,13 @@ test('transient upstream failure permits recent cache but not ancient unchecked 
  const expired=database();put(expired,'windows',2*86400000);
  await assert.rejects(resolveInstaller(expired,'windows',{now:NOW,fetcher}),/download_unavailable/);
 });
+test('file availability alone never refreshes the version-check timestamp',async()=>{
+ const env=database();put(env,'windows',3600000);
+ const previous=env.sql.prepare('SELECT checked_at FROM installer_links WHERE platform=?').get('windows').checked_at;
+ const fetcher=async(u,o)=>o.method==='HEAD'?new Response(null,{headers:{'Content-Type':'application/octet-stream'}}):new Response(null,{status:503});
+ await resolveInstaller(env,'windows',{now:NOW,fetcher});
+ assert.equal(env.sql.prepare('SELECT checked_at FROM installer_links WHERE platform=?').get('windows').checked_at,previous);
+});
 test('retry forces a check even for fresh cache and is throttled across instances by DB',async()=>{
  const env=database();put(env);let heads=0;const fetcher=async(u,o)=>{if(o.method==='HEAD'){heads++;return new Response(null,{status:200});}return Response.json([]);};
  await resolveInstaller(env,'windows',{force:true,now:NOW,fetcher});assert.equal(heads,1);
@@ -94,7 +108,8 @@ test('retry forces a check even for fresh cache and is throttled across instance
  await resolveInstaller(env,'windows',{force:true,now:NOW+31000,fetcher});assert.equal(heads,2);
 });
 test('platforms are independent; no configuration fails closed',async()=>{
- const env=database();const fetcher=async(u,o)=>{if(o.method==='HEAD')return new Response(null,{status:u.endsWith('.exe')?404:200});return Response.json([]);};
+ const env=database(),latest=release();latest.assets=Object.keys(seed).flatMap(p=>release('v2.5.3',p).assets);
+ const fetcher=async(u,o)=>{if(o.method==='HEAD')return new Response(null,{status:u.endsWith('.exe')?404:200});return Response.json(u.endsWith('/latest')?latest:[latest]);};
  await refreshInstallers(env,fetcher);
  assert.equal(env.sql.prepare('SELECT count(*) n FROM installer_links').get().n,2);
  assert.equal((await download(req(),{},null,{fetcher:async()=>new Response(null,{status:503})})).status,503);
