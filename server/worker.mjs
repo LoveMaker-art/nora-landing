@@ -98,7 +98,7 @@ export default {async scheduled(event,env,ctx) {ctx.waitUntil(refreshInstallers(
   }
   if(url.pathname==='/api/launcher/stats'&&request.method==='GET') {
    if(!env.STATS_READ_KEY||!await secretMatches(request.headers.get('Authorization'),`Bearer ${env.STATS_READ_KEY}`))return json({error:'unauthorized'},401);
-   return url.searchParams.get('view')==='funnel'
+   return (url.searchParams.get('view')==='funnel'||url.searchParams.get('view')==='problems'&&url.searchParams.get('scope')==='new_installations')
     ?await aggregateRead(request,()=>launcherStats(request,env))
     :await launcherStats(request,env);
   }

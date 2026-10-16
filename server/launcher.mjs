@@ -156,7 +156,7 @@ export async function launcherStats(request, env) {
  }
  if(params.has('view')){
   if(params.get('view')==='problems'){
-   const result=await launcherProblems(env,params,{where,values,from,to,monitorState});
+   const result=await launcherProblems(env,params,{where,values,from,to,start,end,monitorState});
    return result.error?json({error:result.error},result.status):json(result.data);
   }
   if(params.get('view')==='funnel'){

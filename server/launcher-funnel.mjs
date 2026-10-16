@@ -1,21 +1,25 @@
 // Cohorts use first-seen installation identities, never website visitors.
 const DAY=86400000;
-export function summarizeFunnel(rows, {from,to,windowDays,now}) {
+export function* installationCohorts(rows,{windowDays,now}) {
  const groups=new Map();
  for(const row of rows){if(!groups.has(row.installation_id))groups.set(row.installation_id,[]);groups.get(row.installation_id).push(row);}
- const totals={first_opened:0,install_started:0,install_completed:0,runtime_ready:0};
- const states={},statesByStage=new Map(),daily=new Map(),durations=new Map(),failures=new Map();let observing=0,finalized=0;
  for(const events of groups.values()){
   events.sort((a,b)=>a.sequence-b.sequence);
   const first=events.find(e=>e.event==='launcher_first_seen');if(!first)continue;
   const cutoff=Math.min(now,first.occurred_at+windowDays*DAY),mature=now>=first.occurred_at+windowDays*DAY;
+  const observed=events.filter(e=>e.sequence>=first.sequence&&e.occurred_at>=first.occurred_at&&e.occurred_at<=cutoff);
+  const starts=observed.filter(e=>e.event==='operation_started'&&e.action==='install');
+  yield {first,cutoff,mature,observed,starts,operations:new Set(starts.map(e=>e.operation_id))};
+ }
+}
+export function summarizeFunnel(rows, {from,to,windowDays,now}) {
+ const totals={first_opened:0,install_started:0,install_completed:0,runtime_ready:0};
+ const states={},statesByStage=new Map(),waitingSteps=new Map(),daily=new Map(),durations=new Map(),failures=new Map();let observing=0,finalized=0;
+ for(const {first,cutoff,mature,observed,starts,operations} of installationCohorts(rows,{windowDays,now})){
   mature?finalized++:observing++;
   const day=new Date(first.occurred_at+28800000).toISOString().slice(0,10);
   if(!daily.has(day))daily.set(day,{date:day,first_opened:0,install_started:0,install_completed:0,runtime_ready:0,observing:0,finalized:0});
   const bucket=daily.get(day);mature?bucket.finalized++:bucket.observing++;
-  const observed=events.filter(e=>e.sequence>=first.sequence&&e.occurred_at>=first.occurred_at&&e.occurred_at<=cutoff);
-  const starts=observed.filter(e=>e.event==='operation_started'&&e.action==='install');
-  const operations=new Set(starts.map(e=>e.operation_id));
   const completed=observed.find(e=>e.event==='operation_finished'&&e.action==='install'&&e.status==='succeeded'&&starts.some(s=>s.operation_id===e.operation_id&&s.sequence<e.sequence));
   // The launcher can emit readiness immediately before the install terminal event.
   const ready=completed&&observed.find(e=>e.event==='runtime_first_ready'&&starts.some(s=>s.sequence<e.sequence));
@@ -40,6 +44,11 @@ export function summarizeFunnel(rows, {from,to,windowDays,now}) {
   const stateKey=JSON.stringify([reachedStage,state]);
   if(!statesByStage.has(stateKey))statesByStage.set(stateKey,{stage:reachedStage,state,installations:0});
   statesByStage.get(stateKey).installations++;
+  if(state==='waiting_for_user'){
+   const step=['wait_model','wait_pair','wait_start'].includes(latest.stage)?latest.stage:'unknown',key=JSON.stringify([reachedStage,step]);
+   if(!waitingSteps.has(key))waitingSteps.set(key,{stage:reachedStage,step,installations:0});
+   waitingSteps.get(key).installations++;
+  }
   for(const e of observed){
    if(e.action!=='install'||!operations.has(e.operation_id))continue;
    if(e.event==='operation_finished'&&e.status==='failed'){
@@ -57,14 +66,19 @@ export function summarizeFunnel(rows, {from,to,windowDays,now}) {
  const stages=ordered.map((stage,i)=>({stage,installations:totals[stage],conversion_from_previous:i&&totals[ordered[i-1]]?totals[stage]/totals[ordered[i-1]]:null}));
  return {schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:now,
   measurement:'client_reported_new_installation_cohort_not_people',observation:{window_days:windowDays,observing,finalized,late_reports_may_revise:true},
-  summary:totals,stages,daily:[...daily.values()].sort((a,b)=>a.date.localeCompare(b.date)),states,states_by_stage:[...statesByStage.values()],
+  summary:totals,stages,daily:[...daily.values()].sort((a,b)=>a.date.localeCompare(b.date)),states,states_by_stage:[...statesByStage.values()],waiting_steps:[...waitingSteps.values()],
   durations:[...durations].map(([stage,samples])=>{const v=[...samples.values()].sort((a,b)=>a-b),n=v.length;return {stage,samples:n,median_ms:n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2,p90_ms:v[Math.ceil(n*.9)-1]};}),
   failures:[...failures.values()].map(f=>({stage:f.stage,error_code:f.error_code,failed_operations:f.operations.size,affected_installations:f.installations.size})),
   limits:{file_download_completion:'not_observed',gameplay_success:'not_observed',missing_events:'not_inferred',model_configuration:'not_reported_in_this_view'}};
 }
 export async function launcherFunnel(env,params,{start,end,from,to,now=Date.now()}){
- const raw=params.get('window_days')||'7';if(!/^[0-9]+$/.test(raw)||Number(raw)<1||Number(raw)>30)return {error:'invalid_window',status:400};
  if(['operation_id','installation_id','offset','cursor'].some(key=>params.has(key)))return {error:'incompatible_filters',status:400};
+ const result=await readInstallationCohort(env,params,{start,end,now});
+ if(result.error)return result;
+ return {data:summarizeFunnel(result.rows,{from,to,windowDays:result.windowDays,now})};
+}
+export async function readInstallationCohort(env,params,{start,end,now=Date.now()}){
+ const raw=params.get('window_days')||'7';if(!/^[0-9]+$/.test(raw)||Number(raw)<1||Number(raw)>30)return {error:'invalid_window',status:400};
  const windowDays=Number(raw),bindings=[start,end];let filters='';
  // Filters apply to first-open attributes, not changing versions later in the cohort.
  for(const key of ['platform','launcher_version','product_version']){const value=params.get(key);if(value){filters+=` AND c.${key}=?`;bindings.push(value);}}
@@ -78,5 +92,5 @@ export async function launcherFunnel(env,params,{start,end,from,to,now=Date.now(
  ORDER BY e.installation_id,e.sequence LIMIT 50001`;
  const rows=await env.DB.prepare(sql).bind(...bindings,windowDays*DAY,now).all();
  if(rows.results.length>50000)return {error:'cohort_too_large',status:422,message:'Narrow the cohort dates or platform; no partial funnel returned.'};
- return {data:summarizeFunnel(rows.results,{from,to,windowDays,now})};
+ return {rows:rows.results,windowDays};
 }

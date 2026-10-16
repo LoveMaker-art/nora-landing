@@ -1,4 +1,5 @@
 // Aggregation is a query projection. Raw events and the installation funnel stay intact.
+import {readInstallationCohort,installationCohorts} from './launcher-funnel.mjs';
 const LIMIT = 50000;
 const isError = e => e.event === 'launcher_error' || (e.event === 'operation_finished' && e.status === 'failed');
 const parseFault = e => typeof e.fault === 'string' ? JSON.parse(e.fault) : e.fault || null;
@@ -85,11 +86,22 @@ export async function summarizeProblems(errors,evidence,{monitorState,now=Date.n
   affected_installations:new Set(errors.map(e=>e.installation_id)).size,problems:problems.length},problems};
 }
 
-export async function launcherProblems(env,params,{where,values,from,to,monitorState}) {
- if(['operation_id','installation_id','cursor','window_days'].some(k=>params.has(k)))return {error:'incompatible_filters',status:400};
+export async function launcherProblems(env,params,{where,values,from,to,start,end,monitorState}) {
+ const scope=params.get('scope');
+ if(scope!==null&&scope!=='new_installations')return {error:'invalid_scope',status:400};
+ if(['operation_id','installation_id','cursor',...(scope?[]:['window_days'])].some(k=>params.has(k)))return {error:'incompatible_filters',status:400};
  const raw=params.get('offset')??'0',offset=Number(raw);
  if(!/^\d+$/.test(raw)||!Number.isSafeInteger(offset)||offset>LIMIT)return {error:'invalid_offset',status:400};
  const id=params.get('problem_id');if(id!==null&&!/^[a-f0-9]{64}$/.test(id))return {error:'invalid_problem',status:400};
+ if(scope==='new_installations'){
+  const cohort=await readInstallationCohort(env,params,{start,end});if(cohort.error)return cohort;
+  const candidates=[];
+  for(const {observed,operations} of installationCohorts(cohort.rows,{windowDays:cohort.windowDays,now:Date.now()})){
+   for(const e of observed)if(e.action==='install'&&operations.has(e.operation_id)&&isError(e))candidates.push([e.installation_id,e.sequence]);
+  }
+  where="(installation_id,sequence) IN (SELECT json_extract(value,'$[0]'),json_extract(value,'$[1]') FROM json_each(?))";
+  values=[JSON.stringify(candidates)];
+ }
  const errorWhere=`${where} AND (event='launcher_error' OR (event='operation_finished' AND status='failed'))`;
  const query=(sql,args)=>env.DB.prepare(sql).bind(...args).all();
  // Do not materialize thousands of 24 KiB fault packets just to count/group their fingerprints.
@@ -102,7 +114,7 @@ export async function launcherProblems(env,params,{where,values,from,to,monitorS
   FROM launcher_events WHERE installation_id IN (SELECT DISTINCT installation_id FROM launcher_events WHERE ${errorWhere}) AND event<>'launcher_error' ORDER BY installation_id,sequence LIMIT ${LIMIT+1}`,values)).results;
  if(evidence.length>LIMIT)return {error:'too_many_events',status:422};
  const now=Date.now(),result=await summarizeProblems(errors,evidence,{monitorState,now});
- const common={schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:now,measurement:'installation_environments_not_people',
+ const common={schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:now,...(scope?{scope,window_days:Number(params.get('window_days')||'7')} : {}),measurement:'installation_environments_not_people',
   recovery_scope:'latest_received_same_action_outcome_at_query_time',summary:result.summary,
   limits:{technical_signature:'coarse_group_not_proven_root_cause',no_observed_recovery:'not_proof_of_permanent_failure',pagination:'snapshot_offset_refresh_from_zero_when_polling'}};
  const loadSamples=async problems=>{

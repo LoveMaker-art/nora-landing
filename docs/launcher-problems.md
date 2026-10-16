@@ -25,6 +25,16 @@ GET /api/launcher/stats?from=YYYY-MM-DD&to=YYYY-MM-DD&view=problems&problem_id=<
 
 ## 计数口径
 
+### 首次安装页
+
+`view=problems&scope=new_installations&window_days=7` 按首次打开日期选择新安装，与安装漏斗复用完全相同的安装标识、首次打开属性筛选和观察窗口，只选择这些安装任务中已上报的错误。它不混入既有安装的更新、模型测试和辅助检查错误。原默认问题查询保持不变。
+
+原因证据仍通过 `sample.fault` 提供，仅供持有读密钥的服务端读取；公开看板只投影白名单原因、版本与去标识计数，不返回故障包或安装标识。后续结果跨所选日期和启动器版本核对，同一动作成功才计为恢复，启动旧程序不算安装或更新恢复。
+
+这个聚合视图复用 30 分钟缓存及额度耗尽的同条件旧数据回退。`generated_at` 是快照时间，不能当作实时在线状态。`offset` 和 `problem_id` 继续适用；不要混用 cursor、operation_id、installation_id。不改变采集或数据库。
+
+安装漏斗新增 `waiting_steps: [{stage, step, installations}]`，其中 step 为 `wait_model`、`wait_pair`、`wait_start` 或 `unknown`。分项按原有里程碑 stage 归属，各项之和等于 waiting_for_user；已成功启动的记录不重复计入等待。`details=waiting_steps` 可作为新版客户端的独立缓存键，避免复用升级前不含该字段的快照。
+
 - `error_events`：原始错误事件数。仅 launcher_error 和 failed operation_finished，阶段失败事件及心跳不重复纳入。
 - `attempts`：按 installation_id + operation_id 去重。一次任务的错误事件和最终失败只计一个任务；用户再次操作仍算新的尝试。
 - `failed_attempts`：这些任务最后已收终结结果为 failed 的数量。
