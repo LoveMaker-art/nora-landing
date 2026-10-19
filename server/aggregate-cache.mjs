@@ -8,7 +8,7 @@ function client(response,state){
  return new Response(response.body,{status:response.status,headers});
 }
 async function lastResult(cache,key,limited){
- const saved=await match(cache,key);if(!saved?.ok)return limited;
+ const saved=await match(cache,key)||(key.includes('/aggregate-last-v2/api/stats')?await match(cache,key.replace('/aggregate-last-v2/','/aggregate-last-v1/')):null);if(!saved?.ok)return limited;
  try{
   const body=await saved.json(),error=await limited.clone().json();
   return Response.json({...body,stale:{reason:error.error,retry_at:error.retry_at}},
@@ -24,8 +24,10 @@ async function put(cache,key,response,ttl){
 
 // Call only after authentication, and only for aggregate statistics, not raw logs.
 export async function aggregateRead(request,load,{cache=globalThis.caches?.default,ttl=1800}={}){
- const url=new URL(request.url);url.searchParams.sort();url.pathname='/__nora_cache/aggregate-v1'+url.pathname;
- const key=url.href,lastKey=key.replace('/aggregate-v1','/aggregate-last-v1'),saved=await match(cache,key);
+ const url=new URL(request.url);url.searchParams.sort();
+ // Refresh only website aggregates when their response gains independent netdisk metrics.
+ const version=url.pathname==='/api/stats'?'v2':'v1';url.pathname='/__nora_cache/aggregate-'+version+url.pathname;
+ const key=url.href,lastKey=key.replace('/aggregate-'+version,'/aggregate-last-'+version),saved=await match(cache,key);
  if(saved?.ok){await put(cache,lastKey,saved,7*86400);return client(saved,'hit');}
  const limited=await match(cache,quotaKey);
  if(limited)return client(await lastResult(cache,lastKey,limited),'quota');

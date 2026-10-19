@@ -83,3 +83,24 @@ test('scoped entries persist idempotently and queries never reuse legacy mixed c
  assert.equal(sql.prepare('SELECT count(*) n FROM events').get().n,8);
  assert.equal((await post(env,event({event:'link_click',action:'cloud-add',result:'created'}))).status,400);
 });
+
+test('netdisk retries deduplicate, unique visitors union across days, and installer totals stay separate',async()=>{
+ const {env,sql}=setup(),one=crypto.randomUUID(),two=crypto.randomUUID();
+ const a=event({visitor_id:one,event:'link_click',action:'netdisk-quark'});
+ assert.equal((await post(env,a)).status,202);await post(env,a);
+ await post(env,{...a,event_id:crypto.randomUUID()});
+ await post(env,{...a,event_id:crypto.randomUUID(),visitor_id:two});
+ sql.exec("UPDATE events SET occurred_at="+Date.parse('2026-10-19T12:00:00+08:00'));
+ sql.prepare('UPDATE events SET occurred_at=? WHERE event_id=?').run(Date.parse('2026-10-20T01:00:00+08:00'),a.event_id);
+ const url=origin+'/api/stats?from=2026-10-19&to=2026-10-20';
+ const read=async suffix=>(await worker.fetch(new Request(url+suffix,{headers:{Authorization:'Bearer test-only-read-key'}}),env)).json();
+ const d=await read('');assert.equal(d.netdisk_download.clicks,3);assert.equal(d.netdisk_download.visitors,2);
+ assert.equal(d.summary.download_clicks,0);assert.equal(d.summary.download_visitors,0);assert.equal(d.summary.download_ready_requests,0);
+ assert.ok(d.daily.every(row=>row.download_clicks===0&&row.download_visitors===0));
+ const dash=await read('&view=dashboard');assert.deepEqual(dash.netdisk_download,d.netdisk_download);
+ assert.ok(dash.platforms.every(row=>row.download_click_visitors===0));
+ const filtered=await read('&channel=not-a-channel');assert.equal(filtered.netdisk_download.clicks,0);
+ const old=await worker.fetch(new Request(origin+'/api/stats?from=2026-10-01&to=2026-10-18',{headers:{Authorization:'Bearer test-only-read-key'}}),env);
+ assert.equal((await old.json()).netdisk_download.clicks,null);
+ assert.equal((await post(env,event({event:'link_click',action:'netdisk-quark',result:'downloaded'}))).status,400);
+});

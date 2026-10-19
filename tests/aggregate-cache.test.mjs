@@ -55,3 +55,21 @@ test('cached aggregate access still requires valid authentication',async()=>{
   const launcher=await worker.fetch(new Request('https://noratavern.com/api/launcher/stats?from=2026-10-02&to=2026-10-08&view=funnel'),{STATS_READ_KEY:'test-key'});assert.equal(launcher.status,401);
  }finally{if(original===undefined)delete globalThis.caches;else globalThis.caches=original;}
 });
+
+test('new website fields bypass old aggregate caches without invalidating launcher caches',async()=>{
+ const store=cache();
+ await store.put('https://noratavern.com/__nora_cache/aggregate-v1/api/stats?from=2026-10-02&to=2026-10-08',Response.json({old_shape:true},{headers:{'Cache-Control':'public, max-age=1800'}}));
+ const result=await aggregateRead(request(),()=>Response.json({netdisk_download:{clicks:0,visitors:0}}),{cache:store});
+ assert.equal((await result.json()).netdisk_download.clicks,0);
+ const url='https://noratavern.com/__nora_cache/aggregate-v1/api/launcher/stats?view=funnel';
+ await store.put(url,Response.json({existing_launcher:true},{headers:{'Cache-Control':'public, max-age=1800'}}));
+ const launcher=await aggregateRead(new Request('https://noratavern.com/api/launcher/stats?view=funnel'),()=>assert.fail('launcher cache invalidated'),{cache:store});
+ assert.equal((await launcher.json()).existing_launcher,true);
+});
+
+test('website schema rollout preserves the old matching last-success snapshot during a quota outage',async()=>{
+ const store=cache(),url='https://noratavern.com/__nora_cache/aggregate-last-v1/api/stats?from=2026-10-02&to=2026-10-08';
+ await store.put(url,Response.json({generated_at:'original-time',summary:{uv:42}},{headers:{'Cache-Control':'public, max-age=604800'}}));
+ const r=await aggregateRead(request(),()=>{throw Error('D1 daily row read limit exceeded');},{cache:store});
+ assert.equal(r.status,200);const d=await r.json();assert.equal(d.summary.uv,42);assert.equal(d.generated_at,'original-time');assert.equal(d.netdisk_download,undefined);assert.equal(d.stale.reason,'daily_read_limit');
+});

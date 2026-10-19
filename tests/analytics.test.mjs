@@ -36,7 +36,7 @@ test('obsolete resolver events no longer create telemetry',async()=>{
 
 test('one tagged click emits one correctly scoped event and disabled entries emit none',async()=>{
  const h=harness();await settle();
- for(const action of ['clawchat-local','clawchat-cloud','cloud-add']){const n=h.sent.length;h.click(action);await settle();assert.equal(h.sent.length,n+1);assert.equal(h.sent.at(-1).action,action);assert.equal(h.sent.at(-1).event,'link_click');}
+ for(const action of ['clawchat-local','clawchat-cloud','cloud-add','netdisk-quark']){const n=h.sent.length;h.click(action);await settle();assert.equal(h.sent.length,n+1);assert.equal(h.sent.at(-1).action,action);assert.equal(h.sent.at(-1).event,'link_click');}
  const n=h.sent.length;h.click('cloud-add',true);h.click('unknown');await settle();assert.equal(h.sent.length,n);
 });
 test('all static download and adding routes carry an explicit scope',()=>{
@@ -49,4 +49,11 @@ test('offline deployment clicks queue and resume with the same IDs, without bloc
  const store=new Map(),h=harness(store,async()=>{throw Error('offline');});await settle();h.click('cloud-add');await settle();
  const queued=[...store.entries()].filter(([k])=>k.startsWith('nora_event_v2_')).map(([,v])=>JSON.parse(v)).find(e=>e.action==='cloud-add');assert.ok(queued);
  const next=harness(store);await settle();assert.ok(next.sent.some(e=>e.event_id===queued.event_id&&e.action==='cloud-add'));
+});
+
+test('only the Quark entry is tagged; copying the code is not a download click',()=>{
+ const html=readFileSync('index.html','utf8');
+ assert.equal((html.match(/data-entry-action="netdisk-quark"/g)||[]).length,1);
+ assert.match(html,/<a class="backup-download-link" data-entry-action="netdisk-quark" href="https:\/\/pan.quark.cn\/s\/eb2be7ab6fcd"/);
+ assert.ok(!html.match(/<button[^>]*id="backup-copy"[^>]*data-entry-action/));
 });
