@@ -41,6 +41,9 @@ test('the actual receiver and dashboard adapters agree on waiting, cause, recove
  assert.deepEqual(funnel.waiting_steps.map(r=>[r.step,r.installations]).sort(),[['wait_model',1],['wait_pair',1]]);
  const response=await installationProblems(url,'fixture-key',fetcher);assert.equal(response.status,200);const diagnostics=await response.json();
  assert.equal(diagnostics.issues[0].title,'启动器版本过旧');assert.match(diagnostics.issues[0].cause,/2\.2\.2/);assert.equal(diagnostics.issues[0].recovered_installations,1);
+ assert.deepEqual(diagnostics.outcomes,{affected_installations:1,later_succeeded_installations:1,latest_failed_installations:0,
+  in_progress_installations:0,unconfirmed_installations:0});
+ assert.equal(diagnostics.issues[0].attempts,undefined);assert.equal(diagnostics.issues[0].diagnostics.attempts,1);
  assert.ok(!JSON.stringify([funnel,diagnostics]).includes('private'));assert.ok(!JSON.stringify(diagnostics).includes('fault'));
 });
 
@@ -61,6 +64,7 @@ test('new-installation diagnostics use the identical cohort and retain later sam
  const get=suffix=>{const url=new URL('https://noratavern.com/api/launcher/stats?from=2026-10-16&to=2026-10-16&view=problems&scope=new_installations&window_days=7');for(const [k,v] of new URLSearchParams(suffix))url.searchParams.set(k,v);return worker.fetch(new Request(url,{headers:{Authorization:'Bearer fixture-key'}}),env)};
  const r=await get('');assert.equal(r.status,200);const d=await r.json();
  assert.equal(d.scope,'new_installations');assert.equal(d.summary.affected_installations,1);assert.equal(d.problems[0].affected_installations,1);
+ assert.equal(d.outcomes.affected_installations,1);assert.equal(d.outcomes.later_succeeded_installations,1);
  assert.equal(d.problems[0].recovered_installations,1);assert.equal(d.problems[0].sample.fault.errors[0].message,'请先升级启动器到 2.2.2 或更新版本。');
  assert.equal((await get('&window_days=0')).status,400);
  assert.equal((await get('&scope=invalid')).status,400);

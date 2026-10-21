@@ -73,3 +73,26 @@ test('website schema rollout preserves the old matching last-success snapshot du
  const r=await aggregateRead(request(),()=>{throw Error('D1 daily row read limit exceeded');},{cache:store});
  assert.equal(r.status,200);const d=await r.json();assert.equal(d.summary.uv,42);assert.equal(d.generated_at,'original-time');assert.equal(d.netdisk_download,undefined);assert.equal(d.stale.reason,'daily_read_limit');
 });
+
+test('problem outcome rollout bypasses old response shapes without invalidating funnel caches',async()=>{
+ const store=cache(),query='from=2026-10-20&scope=new_installations&to=2026-10-20&view=problems';
+ await store.put('https://noratavern.com/__nora_cache/aggregate-v1/api/launcher/stats?'+query,
+  Response.json({summary:{failed_attempts:300}},{headers:{'Cache-Control':'public, max-age=1800'}}));
+ let calls=0;const load=()=>{calls++;return Response.json({outcomes:{affected_installations:1}})};
+ const request=new Request('https://noratavern.com/api/launcher/stats?'+query);
+ assert.equal((await(await aggregateRead(request,load,{cache:store})).json()).outcomes.affected_installations,1);
+ await aggregateRead(request,load,{cache:store});assert.equal(calls,1);
+ const funnel='https://noratavern.com/__nora_cache/aggregate-v1/api/launcher/stats?view=funnel';
+ await store.put(funnel,Response.json({original:true},{headers:{'Cache-Control':'public, max-age=1800'}}));
+ const kept=await aggregateRead(new Request('https://noratavern.com/api/launcher/stats?view=funnel'),()=>assert.fail('funnel cache invalidated'),{cache:store});
+ assert.equal((await kept.json()).original,true);
+});
+
+test('problem schema rollout retains a matching old snapshot on quota failure without inventing outcomes',async()=>{
+ const store=cache(),query='from=2026-10-20&scope=new_installations&to=2026-10-20&view=problems';
+ await store.put('https://noratavern.com/__nora_cache/aggregate-last-v1/api/launcher/stats?'+query,
+  Response.json({generated_at:123,summary:{affected_installations:2}},{headers:{'Cache-Control':'public, max-age=604800'}}));
+ const r=await aggregateRead(new Request('https://noratavern.com/api/launcher/stats?'+query),()=>{throw Error('D1 daily row read limit exceeded')},{cache:store});
+ const d=await r.json();assert.equal(r.status,200);assert.equal(d.summary.affected_installations,2);
+ assert.equal(d.generated_at,123);assert.equal(d.outcomes,undefined);assert.equal(d.stale.reason,'daily_read_limit');
+});

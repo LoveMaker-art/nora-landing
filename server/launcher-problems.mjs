@@ -20,6 +20,17 @@ async function digest(value) {
 }
 const unique = (rows,key) => [...new Set(rows.map(e=>e[key]))].sort();
 
+function summarizeOutcomes(installations) {
+ const priority={succeeded:0,unconfirmed:1,in_progress:2,failed:3},environments=new Map();
+ for(const row of installations){
+  const previous=environments.get(row.installation_id);
+  if(previous===undefined||priority[row.outcome]>priority[previous])environments.set(row.installation_id,row.outcome);
+ }
+ const count=outcome=>[...environments.values()].filter(value=>value===outcome).length;
+ return {affected_installations:environments.size,later_succeeded_installations:count('succeeded'),
+  latest_failed_installations:count('failed'),in_progress_installations:count('in_progress'),unconfirmed_installations:count('unconfirmed')};
+}
+
 export async function summarizeProblems(errors,evidence,{monitorState,now=Date.now()}) {
  const byEnvironment=new Map(), groups=new Map(),taskFingerprints=new Map();
  const evidenceKey=e=>JSON.stringify([taskKey(e),...technicalKey(e)]);
@@ -54,12 +65,16 @@ export async function summarizeProblems(errors,evidence,{monitorState,now=Date.n
    const successes=history.filter(e=>e.event==='operation_finished'&&e.status==='succeeded'&&e.action===last.action&&e.sequence>last.sequence);
    // A later start is evidence of usability, never proof that an update/install succeeded.
    const recovered=latestAction?.event==='operation_finished'&&latestAction.status==='succeeded'&&latestAction.sequence>last.sequence;
+   const relevant=latestAction&&(latestAction.sequence>=last.sequence||latestAction.operation_id===last.operation_id);
+   const observed=relevant?monitorState(latestAction,now):null;
+   const outcome=recovered?'succeeded':relevant&&latestAction.event==='operation_finished'&&latestAction.status==='failed'?'failed'
+    :relevant&&['running','slow','possibly_stalled'].includes(observed)?'in_progress':'unconfirmed';
    installations.push({installation_id,error_events:failures.length,attempts:tasks.size,
     failed_attempts:[...tasks].filter(id=>terminals.get(id)?.status==='failed').length,
     recovered_attempts:[...tasks].filter(id=>terminals.get(id)?.status==='succeeded').length,
     first_seen:Math.min(...failures.map(e=>e.occurred_at)),last_seen:last.occurred_at,
     latest_error_event_id:last.event_id,latest_error_operation_id:last.operation_id,
-    recovery:recovered?'succeeded_same_action':'no_observed_recovery',
+    recovery:recovered?'succeeded_same_action':'no_observed_recovery',outcome,
     later_same_action_success:successes.length>0,
     latest_action_outcome:latestAction ? {event:latestAction.event,status:latestAction.status,stage:latestAction.stage,operation_id:latestAction.operation_id,occurred_at:latestAction.occurred_at}:null,
     later_start_succeeded:history.some(e=>e.sequence>last.sequence&&e.event==='operation_finished'&&e.action==='start'&&e.status==='succeeded'),
@@ -76,13 +91,15 @@ export async function summarizeProblems(errors,evidence,{monitorState,now=Date.n
    failed_attempts:installations.reduce((n,e)=>n+e.failed_attempts,0),recovered_attempts:installations.reduce((n,e)=>n+e.recovered_attempts,0),
    affected_installations:installations.length,recovered_installations:installations.filter(e=>e.recovery==='succeeded_same_action').length,
    no_observed_recovery_installations:installations.filter(e=>e.recovery==='no_observed_recovery').length,
+   outcomes:summarizeOutcomes(installations),
    first_seen:Math.min(...rows.map(e=>e.occurred_at)),last_seen:Math.max(...rows.map(e=>e.occurred_at)),
    sample:{event_id:sample.event_id,operation_id:sample.operation_id,installation_id:sample.installation_id,fault:parseFault(sample)},installations});
  }
  problems.sort((a,b)=>b.no_observed_recovery_installations-a.no_observed_recovery_installations||b.last_seen-a.last_seen||a.problem_id.localeCompare(b.problem_id));
  const terminals=new Map();for(const e of evidence)if(e.event==='operation_finished')terminals.set(taskKey(e),e);
  const tasks=new Set(errors.map(taskKey));
- return {summary:{error_events:errors.length,attempts:tasks.size,failed_attempts:[...tasks].filter(k=>terminals.get(k)?.status==='failed').length,
+ return {outcomes:summarizeOutcomes(problems.flatMap(p=>p.installations)),
+  summary:{error_events:errors.length,attempts:tasks.size,failed_attempts:[...tasks].filter(k=>terminals.get(k)?.status==='failed').length,
   affected_installations:new Set(errors.map(e=>e.installation_id)).size,problems:problems.length},problems};
 }
 
@@ -115,7 +132,7 @@ export async function launcherProblems(env,params,{where,values,from,to,start,en
  if(evidence.length>LIMIT)return {error:'too_many_events',status:422};
  const now=Date.now(),result=await summarizeProblems(errors,evidence,{monitorState,now});
  const common={schema_version:1,timezone:'Asia/Shanghai',from,to,generated_at:now,...(scope?{scope,window_days:Number(params.get('window_days')||'7')} : {}),measurement:'installation_environments_not_people',
-  recovery_scope:'latest_received_same_action_outcome_at_query_time',summary:result.summary,
+  recovery_scope:'latest_received_same_action_outcome_at_query_time',outcomes:result.outcomes,summary:result.summary,
   limits:{technical_signature:'coarse_group_not_proven_root_cause',no_observed_recovery:'not_proof_of_permanent_failure',pagination:'snapshot_offset_refresh_from_zero_when_polling'}};
  const loadSamples=async problems=>{
   if(!problems.length)return;
