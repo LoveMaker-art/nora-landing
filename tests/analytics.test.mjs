@@ -54,6 +54,6 @@ test('offline deployment clicks queue and resume with the same IDs, without bloc
 test('only the Quark entry is tagged; copying the code is not a download click',()=>{
  const html=readFileSync('index.html','utf8');
  assert.equal((html.match(/data-entry-action="netdisk-quark"/g)||[]).length,1);
- assert.match(html,/<a class="backup-download-link" data-entry-action="netdisk-quark" href="https:\/\/pan.quark.cn\/s\/537af45f3786"/);
+ assert.match(html,/<a class="backup-download-link" data-entry-action="netdisk-quark" href="https:\/\/pan.quark.cn\/s\/e78be1d105cd"/);
  assert.ok(!html.match(/<button[^>]*id="backup-copy"[^>]*data-entry-action/));
 });
