@@ -56,6 +56,7 @@ test('actual authenticated query supports problem/installation drilldown; recove
  const f=fixture(),a=row(1,{launcher_version:'2.0.0'}),b=row(2,{launcher_version:'2.0.1',operation_id:crypto.randomUUID(),status:'succeeded',occurred_at:now+86400000});f.insert(a);f.insert(b);
  assert.equal((await f.get('','')).status,401);
  const r=await f.get('&launcher_version=2.0.0');assert.equal(r.status,200);const d=await r.json();assert.equal(d.summary.error_events,1);assert.equal(d.problems[0].recovered_installations,1);assert.equal(d.problems[0].installations,undefined);
+ assert.equal(d.outcomes.affected_installations,1);assert.equal(d.outcomes.later_succeeded_installations,1);
  const detail=await(await f.get('&problem_id='+d.problems[0].problem_id)).json();assert.equal(detail.installations[0].installation_id,a.installation_id);assert.equal(detail.installations[0].latest_action_outcome.status,'succeeded');assert.equal(detail.next_offset,null);
  assert.equal((await f.get('&problem_id='+'f'.repeat(64))).status,404);
  for(const q of ['&cursor=0','&operation_id=x','&installation_id=x','&window_days=7','&offset=-1','&offset=1.5','&problem_id=bad'])assert.equal((await f.get(q)).status,400);
@@ -64,6 +65,7 @@ test('actual authenticated query supports problem/installation drilldown; recove
 test('installation drilldown paginates more than 100 affected environments',async()=>{
  const f=fixture();for(let i=0;i<105;i++)f.insert(row(1,{installation_id:i.toString(16).padStart(64,'0'),operation_id:crypto.randomUUID()}));
  const d=await(await f.get()).json();assert.equal(d.summary.affected_installations,105);assert.equal(d.problems.length,1);
+ assert.equal(d.outcomes.affected_installations,105);assert.equal(d.outcomes.latest_failed_installations,105);
  const p=await(await f.get('&problem_id='+d.problems[0].problem_id)).json();assert.equal(p.installations.length,100);assert.equal(p.next_offset,100);
  const next=await(await f.get('&problem_id='+d.problems[0].problem_id+'&offset=100')).json();assert.equal(next.installations.length,5);assert.equal(next.next_offset,null);assert.equal(new Set([...p.installations,...next.installations].map(e=>e.installation_id)).size,105);
  f.db.close();
