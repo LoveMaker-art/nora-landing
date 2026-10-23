@@ -127,7 +127,7 @@
 .backup-copy:hover{background:#f6f2fa;border-color:#b4a0cc}
 @media(max-width:480px){.backup-download{column-gap:10px;row-gap:2px}.backup-access{margin-left:0;flex-basis:100%;justify-content:flex-start}.backup-copy{min-height:40px}}
 
-/* Local skill-library preview: a quiet extension of the introduction. */
+/* Skill library: a quiet extension of the introduction. */
 .skills-entry{width:min(650px,calc(100% - 64px));display:flex;align-items:center;gap:14px;margin:-12px auto 30px;padding:14px 19px;border:1px solid #e5deeb;border-radius:12px;background:#fdfbfe;text-decoration:none;transition:background .15s,border-color .15s}
 .skills-entry:hover{background:#f5f0fa;border-color:#c5b3d8}
 .skills-entry-icon{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;color:#947bad}
