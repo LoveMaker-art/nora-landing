@@ -126,3 +126,15 @@
 .backup-copy{min-width:60px;min-height:36px;padding:4px 11px;border:1px solid #dfd5e9;border-radius:7px;background:#fff;color:#6a5189;font-size:12px;line-height:1.5}
 .backup-copy:hover{background:#f6f2fa;border-color:#b4a0cc}
 @media(max-width:480px){.backup-download{column-gap:10px;row-gap:2px}.backup-access{margin-left:0;flex-basis:100%;justify-content:flex-start}.backup-copy{min-height:40px}}
+
+/* Local skill-library preview: a visible entry between the introduction and downloads. */
+.skills-entry{display:flex;align-items:center;gap:17px;margin-bottom:22px;padding:21px 26px;border:1px solid #ddcfeb;border-radius:16px;background:#f0eaf7;text-decoration:none;box-shadow:0 8px 25px #45335e03;transition:background .15s,border-color .15s}
+.skills-entry:hover{background:#eae1f4;border-color:#bca3d2}
+.skills-entry-icon{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border:1px solid #e2d7ed;border-radius:12px;background:#fcfaff;color:#8869af}
+.skills-entry-icon svg{width:25px;height:25px}
+.skills-entry-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.skills-entry-copy strong{font-size:17px;font-weight:650;color:#584174}
+.skills-entry-copy>span{font-size:13px;color:#8a779b}
+.skills-entry-action{display:flex;align-items:center;gap:17px;margin-left:auto;font-size:14px;font-weight:500;white-space:nowrap;color:#6c4e91}
+.skills-entry-action>span{font-size:21px;font-weight:400}
+@media(max-width:600px){.skills-entry{padding:18px 20px;gap:12px;margin-bottom:20px;border-radius:14px}.skills-entry-icon{display:none}.skills-entry-copy strong{font-size:16px}.skills-entry-copy>span{font-size:12px}.skills-entry-action{font-size:12px;gap:9px}.skills-entry-action>span{font-size:19px}}
