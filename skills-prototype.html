@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Local design prototype. Example catalogue only; no installation or production analytics. -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>技能库 · 诺拉酒馆</title>
+  <link rel="icon" href="assets/nora-avatar.jpg">
+  <link rel="stylesheet" href="landing.css">
+  <link rel="stylesheet" href="skills-prototype.css">
+</head>
+<body class="skills-page">
+  <header class="top wrap">
+    <a class="brand" href="index.html"><img src="assets/nora-avatar.jpg" alt="">诺拉<span>NORA TAVERN</span></a>
+    <nav aria-label="主导航"><a href="skills-prototype.html" aria-current="page">技能库</a><a href="index.html#nr-benefits">玩法</a><a href="index.html#nr-faq">帮助</a><a class="nav-start" href="index.html#start">开始体验 ↓</a></nav>
+  </header>
+  <main class="wrap library-main">
+    <div class="library-path"><a href="index.html">首页</a><span aria-hidden="true">/</span><span>技能库</span><span class="preview-tag">设计预览</span></div>
+    <section class="library-hero" aria-labelledby="library-title">
+      <div class="eyebrow">NORA SKILLS</div>
+      <h1 id="library-title">诺拉的技能，<em>随你的故事扩展。</em></h1>
+      <p class="lead">发现适合你的技能，让角色创作与酒馆管理更顺手。</p>
+      <form class="library-search" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg>
+        <label class="sr-only" for="skill-search">搜索技能名称或用途</label>
+        <input id="skill-search" type="search" placeholder="搜索技能名称或用途" autocomplete="off">
+        <kbd aria-hidden="true">/</kbd>
+      </form>
+    </section>
+    <section class="library-catalogue" aria-label="技能目录">
+      <div class="catalogue-toolbar">
+        <div class="category-tabs" role="group" aria-label="筛选技能分类">
+          <button type="button" data-category="全部" aria-pressed="true">全部技能</button>
+          <button type="button" data-category="角色创作" aria-pressed="false">角色创作</button>
+          <button type="button" data-category="世界构建" aria-pressed="false">世界构建</button>
+          <button type="button" data-category="酒馆管理" aria-pressed="false">酒馆管理</button>
+        </div>
+        <span id="result-count" class="result-count" role="status" aria-live="polite">6 个示例技能</span>
+      </div>
+      <p class="catalogue-note"><span aria-hidden="true">◌</span> 以下为排版示例，实际技能内容待确认，暂不提供安装。</p>
+      <div class="skill-grid" id="skill-grid"></div>
+      <div class="library-empty" id="library-empty" hidden>
+        <h2>没有找到匹配的技能</h2><p>换个关键词，或看看其他分类。</p><button type="button" id="clear-filters">查看全部技能</button>
+      </div>
+    </section>
+    <aside class="library-bottom"><div><h2>先选用途，再看用法。</h2><p>点开技能，查看它能做什么，以及如何向诺拉描述你的需求。</p></div><a href="index.html#start">还没有诺拉？前往下载 <span aria-hidden="true">↗</span></a></aside>
+  </main>
+  <footer class="wrap"><span>✦ 诺拉与酒馆 <small>Powered by ClawChat</small></span><a href="index.html">返回首页 ↗</a></footer>
+  <dialog id="skill-dialog" class="skill-dialog" aria-labelledby="detail-title" aria-describedby="detail-description">
+    <div class="detail-top"><span class="detail-eyebrow">技能详情 · 设计示例</span><button type="button" id="close-dialog" class="close-dialog" aria-label="关闭技能详情"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div id="detail-icon" class="skill-icon"></div>
+    <span class="detail-category" id="detail-category"></span>
+    <h2 id="detail-title"></h2>
+    <p id="detail-description"></p>
+    <div class="detail-section"><h3>可以帮你</h3><ul id="detail-benefits"></ul></div>
+    <div class="prompt-box"><h3>试试这样对诺拉说</h3><p id="detail-prompt"></p><button type="button" id="copy-prompt">复制示例指令 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg></button><span id="copy-feedback" role="status" aria-live="polite"></span></div>
+    <p class="detail-disclaimer">这是交互预览，示例指令不会安装或启用技能。</p>
+  </dialog>
+  <script src="skills-prototype.js"></script>
+</body>
+</html>
