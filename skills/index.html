@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- Public skill catalogue. Download packages contain complete skill directories. -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>技能库 · 诺拉酒馆</title>
+  <link rel="icon" href="../assets/nora-avatar.jpg">
+  <link rel="stylesheet" href="../landing.css">
+  <link rel="stylesheet" href="library.css?v=release-20261029">
+</head>
+<body class="skills-page">
+  <header class="top wrap">
+    <a class="brand" href="../index.html"><img src="../assets/nora-avatar.jpg" alt="">诺拉<span>NORA TAVERN</span></a>
+    <nav aria-label="主导航"><a href="./" aria-current="page">技能库</a><a href="../index.html#nr-benefits">玩法</a><a href="../index.html#nr-faq">帮助</a><a class="nav-start" href="../index.html#start">开始体验 ↓</a></nav>
+  </header>
+  <main class="wrap library-main">
+    <div class="library-path"><a href="../index.html">首页</a><span aria-hidden="true">/</span><span>技能库</span></div>
+    <section class="library-hero" aria-labelledby="library-title">
+      <div class="eyebrow">NORA SKILLS</div>
+      <h1 id="library-title">让诺拉，<em>多帮你一点。</em></h1>
+      <p class="lead">设计性格、创作世界、打理酒馆。</p>
+      <form class="library-search" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg>
+        <label class="sr-only" for="skill-search">搜索想让诺拉帮你做的事</label>
+        <input id="skill-search" type="search" placeholder="想让诺拉帮你做什么？" autocomplete="off">
+        <kbd aria-hidden="true">/</kbd>
+      </form>
+    </section>
+    <section class="library-catalogue" aria-label="技能目录">
+      <div class="catalogue-toolbar">
+        <div class="category-tabs" role="group" aria-label="筛选技能分类">
+          <button type="button" data-category="全部" aria-pressed="true">全部技能</button>
+          <button type="button" data-category="内容创作" aria-pressed="false">内容创作</button>
+          <button type="button" data-category="酒馆管理" aria-pressed="false">酒馆管理</button>
+          <button type="button" data-category="日常维护" aria-pressed="false">日常维护</button>
+        </div>
+        <span id="result-count" class="result-count" role="status" aria-live="polite">7 项技能</span>
+      </div>
+      <div class="skill-grid" id="skill-grid"></div>
+      <noscript><p class="catalogue-note">目录暂时无法显示。你也可以直接下载：<a href="packages/nora-persona-designer-0.1.3.zip" download>诺拉性格设计</a>、<a href="packages/sillytavern-control-0.2.1.zip" download>SillyTavern 管理</a>，并查看<a href="INSTALL.md">安装帮助</a>。</p></noscript>
+      <div class="library-empty" id="library-empty" hidden>
+        <h2>没有找到匹配的技能</h2><p>换个关键词，或看看其他分类。</p><button type="button" id="clear-filters">查看全部技能</button>
+      </div>
+    </section>
+    <aside class="library-bottom"><div><h2>直接告诉诺拉，你想做什么。</h2><p>选一个技能，看看用法，再把想做的事告诉诺拉。</p></div><a href="../index.html#start">还没有诺拉？前往下载 <span aria-hidden="true">↗</span></a></aside>
+  </main>
+  <footer class="wrap"><span>✦ 诺拉与酒馆 <small>Powered by ClawChat</small></span><a href="../index.html">返回首页 ↗</a></footer>
+  <dialog id="skill-dialog" class="skill-dialog" aria-labelledby="detail-title" aria-describedby="detail-description">
+    <div class="detail-top"><span class="detail-eyebrow">技能用法</span><button type="button" id="close-dialog" class="close-dialog" aria-label="关闭技能详情"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div id="detail-icon" class="skill-icon"></div>
+    <span class="detail-category" id="detail-category"></span>
+    <h2 id="detail-title"></h2>
+    <p id="detail-description"></p>
+    <div class="detail-section"><h3>可以帮你</h3><ul id="detail-benefits"></ul></div>
+    <p class="detail-disclaimer" id="detail-requirement"></p>
+    <section class="detail-package" id="detail-package" hidden aria-label="下载与安装">
+      <a id="detail-download" class="skill-download" download>下载技能</a>
+      <p id="package-info" class="package-info"></p><p id="detail-download-status" class="package-info" role="status" aria-live="polite"></p>
+      <details class="skill-install"><summary>如何安装</summary>
+        <ol><li>下载后解压，保留完整的技能文件夹。</li><li>请诺拉确认她的技能目录，再把文件夹放进去。云端诺拉需要安装到云端。</li><li>让诺拉确认技能可以使用，再试试下面这句话。</li></ol>
+        <p>已有同名技能时，先让诺拉检查，保留你改过的内容。</p>
+        <a id="detail-setup" hidden>SillyTavern 连接说明 ↗</a>
+        <details class="file-details"><summary>下载文件信息</summary><p class="hash-label">SHA256（用于核对文件是否完整）</p><code class="package-hash" id="package-hash"></code></details>
+        <a class="install-guide" href="INSTALL.md">查看安装帮助 ↗</a>
+      </details>
+    </section>
+    <div class="prompt-box"><h3>对诺拉说</h3><p id="detail-prompt"></p><button type="button" id="copy-prompt">复制这句话 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg></button><span id="copy-feedback" role="status" aria-live="polite"></span></div>
+    <details class="skill-install"><summary>更多使用说明</summary><a class="detail-source" id="detail-source" target="_blank" rel="noopener noreferrer">阅读详细用法 ↗</a></details>
+  </dialog>
+  <script type="module" src="library.js?v=release-20261029"></script>
+</body>
+</html>

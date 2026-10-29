@@ -1,4 +1,10 @@
-import {mkdir,rm,copyFile,cp} from 'node:fs/promises';
+import './build-skills.mjs';
+import {mkdir,rm,copyFile,cp,readFile,writeFile} from 'node:fs/promises';
 await rm('dist',{recursive:true,force:true});await mkdir('dist');
 for(const f of ['index.html','landing.css','analytics.js','installers.js','cloud.js','backup-download.js'])await copyFile(f,`dist/${f}`);
 await cp('assets','dist/assets',{recursive:true});
+await cp('skills','dist/skills',{recursive:true});
+await rm('dist/skills/catalogue.local.json',{force:true});
+const skillsHtml=await readFile('dist/skills/index.html','utf8');
+await writeFile('dist/skills/index.html',skillsHtml.replace(/<span data-local-only>.*?<\/span>/g,''));
+await rm('dist/skills/LOCAL-TEST.md',{force:true});

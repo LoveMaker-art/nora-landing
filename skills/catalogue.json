@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "library": "nora-skills",
+  "release_state": "published",
+  "catalogue_urls": [
+    "https://jihulab.com/LoveMaker-art/nora-tavern/-/raw/main/skills/catalogue.json",
+    "https://noratavern.com/skills/catalogue.json"
+  ],
+  "skills": [
+    {
+      "id": "nora-persona-designer",
+      "title": "诺拉性格设计",
+      "description": "和诺拉一起设定性格、说话方式与相处习惯。",
+      "delivery": "download",
+      "requirement": "只生成人格设定文稿，不会自动更换你现在的人格，也不会修改模型设置。",
+      "version": "0.1.3",
+      "package": {
+        "filename": "nora-persona-designer-0.1.3.zip",
+        "root_directory": "nora-persona-designer",
+        "bytes": 7271,
+        "sha256": "28603b6af0588552caf63e754a5d3fb4c5918dbc588feeeb608ece0a1e48a340",
+        "urls": [
+          "https://jihulab.com/api/v4/projects/378185/packages/generic/nora-skills/nora-persona-designer-0.1.3/nora-persona-designer-0.1.3.zip",
+          "https://noratavern.com/skills/packages/nora-persona-designer-0.1.3.zip"
+        ]
+      }
+    },
+    {
+      "id": "sillytavern-control",
+      "title": "SillyTavern 管理",
+      "description": "让诺拉协助管理你已有的 SillyTavern。",
+      "delivery": "download",
+      "requirement": "用于单独安装的 SillyTavern，需通过 st-mcp 连接，技能可协助接入。下载包不包含 st-mcp 或酒馆程序；部分系统与插件组合尚未实测。",
+      "version": "0.2.1",
+      "package": {
+        "filename": "sillytavern-control-0.2.1.zip",
+        "root_directory": "sillytavern-control",
+        "bytes": 10443,
+        "sha256": "192637f50cb0ed3bb910118cb7d3449505ef623851620a5f7c288c68039beada",
+        "urls": [
+          "https://jihulab.com/api/v4/projects/378185/packages/generic/nora-skills/sillytavern-control-0.2.1/sillytavern-control-0.2.1.zip",
+          "https://noratavern.com/skills/packages/sillytavern-control-0.2.1.zip"
+        ]
+      }
+    },
+    {
+      "id": "nora-cardforge",
+      "title": "世界卡创作",
+      "description": "把角色、背景和玩法想法，做成可以使用的世界卡。",
+      "delivery": "bundled",
+      "requirement": "生成卡片不会自动导入酒馆。导入前，需要先连接诺拉与酒馆。"
+    },
+    {
+      "id": "tavern",
+      "title": "诺拉酒馆管理",
+      "description": "让诺拉帮你整理世界、角色和资料，接着玩下去。",
+      "delivery": "bundled",
+      "requirement": "需要先连接诺拉与当前酒馆，只按你的要求修改或删除内容。"
+    },
+    {
+      "id": "tavern-ops",
+      "title": "使用问题排查",
+      "description": "酒馆打不开、连接不上时，帮你找到问题所在。",
+      "delivery": "bundled",
+      "requirement": "检查不会自动重启或重装。需要恢复服务时，会先说明处理方式。"
+    },
+    {
+      "id": "tavern-updater",
+      "title": "诺拉酒馆更新",
+      "description": "看看有没有新版本，需要时再帮你更新。",
+      "delivery": "bundled",
+      "requirement": "能否更新取决于当前安装版本，旧版可能需要先接入更新功能。更新时诺拉可能短暂离线。"
+    },
+    {
+      "id": "model-provider-config",
+      "title": "诺拉模型设置",
+      "description": "设置或更换诺拉使用的 AI 模型。",
+      "delivery": "bundled",
+      "requirement": "适用于支持此功能的本地安装。保存后在新对话中生效；保存成功不等于连接测试通过。"
+    }
+  ]
+}

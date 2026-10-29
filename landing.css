@@ -126,3 +126,18 @@
 .backup-copy{min-width:60px;min-height:36px;padding:4px 11px;border:1px solid #dfd5e9;border-radius:7px;background:#fff;color:#6a5189;font-size:12px;line-height:1.5}
 .backup-copy:hover{background:#f6f2fa;border-color:#b4a0cc}
 @media(max-width:480px){.backup-download{column-gap:10px;row-gap:2px}.backup-access{margin-left:0;flex-basis:100%;justify-content:flex-start}.backup-copy{min-height:40px}}
+
+/* Skill library: a quiet extension of the introduction. */
+.skills-entry{width:min(650px,calc(100% - 64px));display:flex;align-items:center;gap:14px;margin:-12px auto 30px;padding:14px 19px;border:1px solid #e5deeb;border-radius:12px;background:#fdfbfe;text-decoration:none;transition:background .15s,border-color .15s}
+.skills-entry:hover{background:#f5f0fa;border-color:#c5b3d8}
+.skills-entry-icon{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;color:#947bad}
+.skills-entry-icon svg{width:24px;height:24px}
+.skills-entry-copy{display:flex;align-items:center;gap:17px;min-width:0}
+.skills-entry-copy strong{font-size:15px;font-weight:600;color:#665078}
+.skills-entry-copy>span{font-size:12px;color:#8a7f94;padding-left:17px;border-left:1px solid #e7dfed;line-height:1.5}
+.skills-entry-action{display:flex;align-items:center;gap:11px;margin-left:auto;font-size:12px;white-space:nowrap;color:#7b6096}
+.skills-entry-action>span{font-size:18px;font-weight:400;transition:transform .15s}
+.skills-entry:hover .skills-entry-action>span{transform:translateX(3px)}
+@media(max-width:800px){.skills-entry{width:calc(100% - 40px);max-width:650px;margin-top:0;margin-bottom:24px}}
+@media(max-width:600px){.skills-entry{padding:13px 17px;gap:10px;border-radius:11px}.skills-entry-icon{width:23px}.skills-entry-icon svg{width:22px;height:22px}.skills-entry-copy{align-items:flex-start;flex-direction:column;gap:2px}.skills-entry-copy strong{font-size:14px}.skills-entry-copy>span{font-size:11px;border:0;padding:0}.skills-entry-action{font-size:12px;gap:8px}}
+@media(max-width:380px){.skills-entry{width:calc(100% - 28px);padding:13px 15px}.skills-entry-icon{display:none}}

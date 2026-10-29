@@ -1,5 +1,7 @@
 # 诺拉宣传页
 
+> 技能库上线范围与验收见 [发布记录](docs/skills-library-release-20261029.md)。技能库采用极狐主源、官网同版本文件后备；不包含投稿功能。
+
 诺拉酒馆介绍、开源启动器下载、本地 ClawChat 配对指引与云端部署入口。
 
 使用 GitHub Pages 从 main 分支根目录发布。
@@ -21,3 +23,12 @@
 首次上线前必须填写 `wrangler.jsonc` 的真实 D1 database_id，初始化 migrations，并配置 `STATS_READ_KEY`、`VISITOR_HASH_SECRET` 两个运行时密钥。生产数据库已初始化，运行时密钥已部署。未来重新部署使用现有数据库与密钥，不要重新生成访客去重密钥。不要将 `.dev.vars` 或任何生产密钥加入仓库。
 
 本地验证：`npm ci`、`npm test`、`npx wrangler d1 migrations apply DB --local`、`npm run dev`。本地密钥放在被忽略的 `.dev.vars`。浏览器统计只在正式域名启用，本地浏览不会污染数据。构建命令 `npm run build` 只把网页文件复制到 dist，API 和私有配置不会作为 Cloudflare 静态资源发布。
+
+
+## 技能库
+
+公开二级页为 `skills/`；首页导航和介绍下方均有入口。保留五项项目技能，另外托管两项独立扩展的完整 ZIP，说明与安装边界见 [技能安装指南](skills/INSTALL.md)。
+
+目录数据为 `skills/catalogue.js`；页面与脚本位于同一目录。新增包必须核对大小、SHA256 及完整目录，并同步描述与安装说明，不给独立技能生成不存在的应用仓库路径。构建将整个 skills 目录复制到 dist/skills，使页面、说明、参考和压缩包一同发布。技能页面只提供浏览与下载，不执行技能，也未扩充原有安装包统计事件。
+
+针对性检查：`npm run build` 后执行 `node --test tests/skills-library.test.mjs tests/analytics.test.mjs`。技能更新不要求发布诺拉酒馆应用新版本。
