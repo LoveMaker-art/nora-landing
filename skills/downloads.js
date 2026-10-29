@@ -1,7 +1,10 @@
 import {packageUrls} from './sources.js';
 
 export function downloadCandidates(skill,{localPreview=false,baseUrl}={}) {
-  return localPreview ? [new URL(skill.package,baseUrl).href] : packageUrls(skill);
+  if(localPreview)return [new URL(skill.package,baseUrl).href];
+  const urls=packageUrls(skill);
+  if(baseUrl)urls[1]=new URL(skill.package,baseUrl).href;
+  return urls;
 }
 
 export async function fetchSkillPackage(skill,{localPreview=false,baseUrl,fetcher=fetch,timeoutMs=15000}={}) {

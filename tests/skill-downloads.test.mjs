@@ -11,6 +11,33 @@ test('public candidates use Jihu first and the exact same version/file at the we
  const urls=downloadCandidates(item);assert.deepEqual(urls,packageUrls(item));
  assert.ok(urls[0].startsWith(sources.packageBases[0]));assert.ok(urls.every(u=>u.endsWith(`${item.id}-${item.version}.zip`)));
 });
+test('public pages retain their own origin and deployment subpath for package fallback',()=>{
+ for(const baseUrl of ['https://noratavern.com/skills/','https://lovemaker-art.github.io/nora-landing/skills/?category=all']){
+  for(const skill of skills.filter(s=>s.delivery==='download')){
+   const urls=downloadCandidates(skill,{baseUrl});
+   assert.equal(urls[0],packageUrls(skill)[0]);
+   const prefix=baseUrl.startsWith('https://noratavern.com/')?'https://noratavern.com/skills/':'https://lovemaker-art.github.io/nora-landing/skills/';
+   assert.equal(urls[1],prefix+skill.package);
+   assert.equal(new URL(urls[1]).origin,new URL(baseUrl).origin);
+  }
+ }
+});
+test('a blocked primary on the GitHub Pages mirror downloads and verifies its same-origin package',async()=>{
+ const baseUrl='https://lovemaker-art.github.io/nora-landing/skills/';
+ for(const skill of skills.filter(s=>s.delivery==='download')){
+  const bytes=await readFile('skills/'+skill.package),calls=[];
+  const result=await fetchSkillPackage(skill,{baseUrl,fetcher:async url=>{
+   calls.push(url);
+   if(calls.length===1)throw new TypeError('Primary unavailable');
+   assert.equal(url,baseUrl+skill.package);
+   return new Response(bytes);
+  }});
+  assert.deepEqual(calls,[packageUrls(skill)[0],baseUrl+skill.package]);
+  assert.equal(result.source,baseUrl+skill.package);
+  assert.equal(result.attempts.length,1);
+  assert.deepEqual(Buffer.from(result.bytes),bytes);
+ }
+});
 test('local preview only accesses the explicit local package',async()=>{
  const calls=[];const result=await fetchSkillPackage(item,{localPreview:true,baseUrl:'http://127.0.0.1:8776/skills/',fetcher:async u=>{calls.push(u);return new Response(good);}});
  assert.deepEqual(calls,['http://127.0.0.1:8776/skills/'+item.package]);assert.deepEqual(Buffer.from(result.bytes),good);
