@@ -10,7 +10,7 @@ const rows=[
 ];
 test('deployment entries exclude legacy mixed clicks and retain distinct counts',()=>{
  const d=deploymentClicks(rows,'2026-10-10','2026-10-11');
- assert.equal(d.status,'ok');assert.equal(d.agent_code,'fb24-84e01bec-1eb1b680');
+ assert.equal(d.status,'ok');assert.equal(d.agent_code,'ad76-58ef78d7-2ebeb66a');
  assert.deepEqual(d.local.clawchat,{clicks:3,visitors:2});
  assert.deepEqual(d.cloud.clawchat,{clicks:5,visitors:4});
  assert.deepEqual(d.cloud.add,{clicks:7,visitors:6});

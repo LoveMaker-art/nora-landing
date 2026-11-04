@@ -1,5 +1,5 @@
 export const deploymentCollectionStart='2026-10-09';
-export const deploymentAgentCode='fb24-84e01bec-1eb1b680';
+export const deploymentAgentCode='ad76-58ef78d7-2ebeb66a';
 export function deploymentClicks(actions,from,to){
  const firstCompleteDay='2026-10-10';
  const status=to<deploymentCollectionStart?'not_collected':from<firstCompleteDay?'partial':'ok';
