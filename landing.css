@@ -3,117 +3,85 @@
 /* Local and cloud cost comparison */
 .hero{align-items:start;gap:55px}.hero-copy{padding-top:48px}.hero h1{font-size:clamp(34px,3.8vw,52px)}.local-entry{padding:18px 0 22px;border-bottom:1px solid #e6dfee}.local-entry p,.cloud-entry-heading p{font-size:14px;margin:8px 0 14px}.launcher-link{text-decoration:none}.local-platforms{font-size:12px!important;text-align:center;margin:8px 0!important}.guide-link{font-size:13px;display:block;text-align:center}.cloud-entry-heading{padding-top:21px}.cloud-entry-heading h3{font-size:17px}.costs-section{padding-top:10px;padding-bottom:64px;scroll-margin-top:24px}.costs-heading{text-align:center;margin-bottom:28px}.costs-heading h2{margin:10px 0}.cost-options{display:grid;grid-template-columns:1fr 1fr;gap:22px}.cost-option{border:1px solid #ded5e9;background:#fff;border-radius:18px;padding:28px}.cloud-option{background:#f3eff8}.mode-label{display:inline-block;color:#695386;font-size:13px;margin-bottom:12px}.cost-option h3{font-size:23px}.cost-highlight{font-size:17px;color:#624792;font-weight:600;margin:10px 0 22px}.cost-option dl{margin:0 0 18px}.cost-option dl>div{display:grid;grid-template-columns:80px 1fr;gap:16px;border-top:1px solid #e9e2ee;padding:14px 0;font-size:14px}.cost-option dt{font-weight:600;color:#4f445e}.cost-option dd{margin:0;color:#746a7e}.cost-option>a{font-size:14px}.cost-footnote{font-size:13px;text-align:center;margin:20px 0 0}.top nav{gap:22px}@media(max-width:800px){.hero-copy{padding-top:0}.hero{gap:26px}.cost-options{grid-template-columns:1fr}.costs-section{padding-bottom:40px}.costs-heading{text-align:left}.costs-heading h2{font-size:26px}.cost-option{padding:23px}.top nav{gap:12px}.top nav a{font-size:12px}.brand{gap:7px;font-size:19px}.brand img{width:30px;height:30px}.cost-option dl>div{grid-template-columns:70px 1fr;gap:12px}}
 
-.deployment-hero{text-align:center;padding-top:44px;padding-bottom:30px}.deployment-hero h1{font-size:clamp(30px,3.5vw,45px);letter-spacing:-1px;margin:14px 0}.deployment-hero h1 em{white-space:normal}.deployment-hero .lead{font-size:16px;line-height:1.8}.deploy-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}.deployment-card{padding:27px 30px;min-width:0}.deployment-card h2{font-size:25px;margin-top:5px}.deployment-card .mode-label{margin-bottom:0}.cloud-deploy{background:#fcfaff}.deploy-summary{font-size:14px}.deploy-facts{background:#f5f2f8;border-radius:12px;padding:15px;margin:18px 0}.deploy-facts p{display:grid;grid-template-columns:70px 1fr;gap:14px;font-size:14px;line-height:1.7;margin:0 0 10px}.deploy-facts p:last-child{margin:0}.deploy-facts b{font-weight:500;color:#4d3f60}.setup-steps{margin:20px 0;padding-left:23px;color:#70647e;font-size:14px;line-height:1.85}.setup-steps li{padding:3px 0}.setup-steps li::marker{color:#81629f}.deployment-note{font-size:13px;background:#f6f3f8;border-radius:10px;padding:14px;color:#7b6a87;margin-top:22px}.deployment-distinction{text-align:center;font-size:13px;margin:19px 0 0;color:#7c6c8b}.deployment-section{padding-bottom:60px}.credit-explainer{display:grid;grid-template-columns:200px 1fr;gap:34px;padding:26px 30px;margin-top:22px;border:1px solid #dcd1e8;border-radius:16px;background:#ebe4f3;align-items:center}.credit-explainer>div:first-child{display:flex;flex-direction:column}.credit-explainer strong{font-size:38px;line-height:1.6;color:#624591}.credit-explainer strong small{font-size:17px;font-weight:500}.credit-explainer span:last-child{font-size:13px;color:#77618c}.credit-explainer h3{font-size:19px;margin-bottom:9px}.credit-explainer p{font-size:14px;line-height:1.9;margin:0}.cost-options{align-items:stretch}@media(max-width:800px){.deployment-hero{text-align:left;padding-top:30px;padding-bottom:16px}.deployment-hero h1{font-size:32px;line-height:1.5}.deployment-hero h1 em{display:block}.deploy-grid{grid-template-columns:1fr;gap:20px}.deployment-card{padding:24px}.deployment-section{padding-bottom:38px}.credit-explainer{grid-template-columns:1fr;gap:18px;padding:22px}.credit-explainer h3{font-size:18px}.deployment-distinction{text-align:left}}
-
-/* Align corresponding sections without fixing content heights. */
-.deploy-grid{align-items:stretch;column-gap:24px;row-gap:0}.deployment-card{display:grid;grid-template-rows:subgrid;grid-row:span 5;background:#fff;padding:28px;border-radius:18px}.deploy-heading{min-width:0}.deploy-heading .deploy-summary{margin-bottom:0}.deploy-facts{margin:20px 0 0}.setup-steps{margin:18px 0}.deploy-actions{padding-bottom:18px;min-width:0}.deploy-footer{align-self:end}.deploy-footer .deployment-note{margin:0;border-top:1px solid #e6dfee;border-radius:0;background:transparent;padding:16px 0 0}.deploy-footer .cost-note{text-align:left;line-height:1.8;font-size:13px!important;min-height:0}.deployment-card .primary,.deployment-card .secondary{min-height:54px}.cost-options{column-gap:24px;row-gap:0}.cost-option{display:grid;grid-template-rows:subgrid;grid-row:span 8;background:#fff;padding:28px}.cost-option dl{display:grid;grid-template-rows:subgrid;grid-row:span 4}.cost-option dl>div{align-content:start}.cost-option>a{align-self:end}.cost-highlight{margin:10px 0 22px}.story-layout{grid-template-columns:1fr 1fr;gap:48px}.story-card{transform:none}.faq-section{grid-template-columns:1fr 1fr;gap:48px}.credit-explainer{grid-template-columns:1fr 1fr;gap:24px;padding:28px}.credit-explainer>div:first-child{border-right:1px solid #d7cbe3;padding-right:24px}.deployment-hero{padding-top:48px;padding-bottom:34px}.costs-section{padding-top:12px}.costs-heading{margin-bottom:30px}@supports not (grid-template-rows:subgrid){.deployment-card{display:flex;flex-direction:column}.deploy-footer{margin-top:auto}.cost-option{display:flex;flex-direction:column}.cost-option dl{display:block;flex:1}}@media(max-width:800px){.deploy-grid,.cost-options{row-gap:20px}.deployment-card,.cost-option{display:block;grid-row:auto;padding:24px}.cost-option dl{display:block}.deploy-footer{margin-top:0}.credit-explainer,.story-layout,.faq-section{grid-template-columns:1fr}.credit-explainer{padding:24px;gap:20px}.credit-explainer>div:first-child{border-right:0;border-bottom:1px solid #d7cbe3;padding:0 0 18px}.deployment-hero{padding-top:30px;padding-bottom:18px}.story-layout{gap:28px}.faq-section{gap:12px}}
-
-/* Clear actions and concise deployment choices. */
-.mode-icon{width:25px;height:25px;color:#7c60a5;flex-shrink:0}.deploy-heading .deploy-summary{font-size:15px;line-height:1.8}.setup-disclosure{border-bottom:0;margin:10px 0}.setup-disclosure>summary{font-size:14px;padding:10px 0;color:#6a538a}.setup-disclosure .setup-steps{margin:0 0 14px}.source-link{text-decoration:none}.deploy-actions .secondary{margin-top:13px}.device-hint{font-size:13px;text-align:center;margin:8px 0 0}.deployment-card .local-platforms{font-size:13px!important}.deploy-actions .guide-link{padding:12px 0 0;font-size:14px}.deploy-actions .downloads summary{padding:3px 0 0!important}.deploy-actions .install-help summary{font-size:14px;padding:12px 0 0!important}.deploy-facts{padding:15px 17px}.deployment-card{grid-row:span 5}.cost-option{grid-row:span 5}.cost-option dl{grid-row:span 2;margin-bottom:0}.cost-option h3 small{font-size:16px;font-weight:400;color:#7e708d}.costs-section{padding-top:0}.costs-heading h2{margin:0 0 10px}.credit-explainer strong small{font-size:17px}.deploy-footer .deployment-note,.deploy-footer .cost-note{font-size:13px!important;line-height:1.8}.deployment-section{padding-bottom:54px}@media(max-width:800px){.deployment-card,.cost-option{grid-row:auto}.deploy-heading .deploy-summary{font-size:14px}.deployment-section{padding-bottom:36px}}
-
-/* Cloud deployment cost section */
-#cost .cost-options{grid-template-columns:1fr}#cost .cost-option{display:block;grid-row:auto}#cost .cost-option dl{display:block}
-
-/* Local first, cloud underneath; pricing belongs to cloud deployment. */
-#start .deploy-grid{grid-template-columns:1fr;gap:28px}
-#start .deployment-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto auto auto;grid-row:auto;gap:0 40px}
-#start .deploy-heading{grid-column:1;grid-row:1}
-#start .deploy-facts{grid-column:1;grid-row:2}
-#start .setup-disclosure{grid-column:1;grid-row:3}
-#start .deploy-actions{grid-column:2;grid-row:1 / 4;padding:0}
-#start .deploy-footer{grid-column:1 / -1;grid-row:4;margin-top:18px}
+/* Deployment choices: cloud recommendation first, local downloads stay visible. */
+.deployment-hero{text-align:center;padding:42px 0 28px}
+.deployment-hero h1{font-size:clamp(30px,3.5vw,45px);letter-spacing:-1px;margin:14px 0}
+.deployment-hero h1 em{white-space:normal}
+.deployment-section{padding-bottom:54px}
+.deploy-grid{display:grid;grid-template-columns:1fr;gap:24px}
+.deployment-card{display:block;min-width:0;padding:26px 30px;border-radius:18px}
+.deployment-card .card-heading{justify-content:flex-start;gap:12px;flex-wrap:wrap}
+.deployment-card .card-heading h2{margin:0;font-size:24px}
+.mode-icon{width:23px;height:23px;color:#7c60a5;flex-shrink:0}
+.deploy-heading .deploy-summary{font-size:15px;line-height:1.8;margin:6px 0 0}
+.deploy-actions{min-width:0;margin-top:20px}
 #cost{scroll-margin-top:24px}
-#start .cloud-fees{grid-column:1 / -1;grid-row:5;border-top:1px solid #e6dfee;margin-top:24px;padding-top:24px}
-#start .cloud-fees .cost-option{padding:0;border:0;border-radius:0;background:transparent}
-#start .cloud-fees .credit-explainer{margin-top:20px}
-@media(max-width:800px){#start .deployment-card{display:block}#start .deploy-actions{margin-top:18px}#start .cloud-fees{margin-top:20px;padding-top:20px}}
-
-/* Cloud is a compact alternative to the primary open-source download. */
-#start .cloud-deploy{background:#f7f4fa;box-shadow:none;align-items:start}
-#start .cloud-deploy .deploy-actions{grid-row:1}
-#start .cloud-deploy h2{font-size:23px}
-.cloud-price-line{font-size:14px;color:#746a7e;margin:18px 0 6px}
-.cloud-billing{border:0;margin-top:4px}
-.cloud-billing summary{font-size:13px;color:#75628c;padding:6px 0}
+.cloud-deploy{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 32px;background:#f3edf8;border-color:#c5b3db;box-shadow:0 12px 36px #67508a0b;align-items:start}
+.cloud-deploy .deploy-heading{grid-column:1;grid-row:1}
+.cloud-deploy .deploy-actions{grid-column:2;grid-row:1;margin:4px 0 0}
+.recommend-badge{display:inline-flex;align-items:center;padding:2px 10px;border:1px solid #d4c3e7;border-radius:999px;background:#e7ddf2;color:#604583;font-size:12px;font-weight:600;line-height:1.7}
+.cloud-offer{margin-top:12px}
+.cloud-offer p{margin:0;font-size:14px;line-height:1.8}
+.cloud-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cloud-buttons button{min-height:52px;margin:0;padding:12px 14px;font-size:14px;white-space:nowrap}
+.cloud-return-note{font-size:12px;color:#665573;margin:0 0 10px;line-height:1.8}
+.cloud-help-row{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:0 32px;align-items:start}
+.cloud-help{grid-column:2;grid-row:1}
+.cloud-billing{grid-column:1;grid-row:1}
+.compact-deployment details{border:0;margin:0}
+.compact-deployment summary{font-size:13px;color:#695386;padding:6px 0}
+.compact-deployment .help-content{padding-top:10px}
+.compact-deployment .help-content p{font-size:13px;margin:12px 0 8px}
 .cloud-billing p{font-size:13px;line-height:1.8}
-#start .cloud-deploy .primary{background:#fff;color:#624792;border:1px solid #d9cce8}
-
-#start .cloud-deploy .deploy-actions{grid-row:1;grid-column:2}
-.cloud-offer{margin:20px 0 8px}.cloud-offer p{margin:8px 0;font-size:14px}.cloud-offer strong{font-size:20px;color:#493658}.cloud-offer span{display:block;font-size:12px;color:#817487;margin-top:4px}
-.cloud-step-label{font-size:14px;font-weight:600;color:#51435f;margin:0 0 10px}.cloud-step-two{margin-top:20px}#start .cloud-deploy #nr-add{margin-top:0}
-#start .model-required{grid-column:1 / -1;grid-row:2;margin-top:24px;padding:20px 22px;border:1px solid #d8c9e8;border-radius:12px;background:#fff}
-.model-required>strong{font-size:16px;color:#594078}.model-required p{font-size:14px;margin:9px 0 5px;line-height:1.8}.model-required>span{font-size:12px;color:#807488}
-@media(max-width:800px){#start .model-required{padding:18px}.cloud-offer strong{font-size:19px}}
-
-/* Reduce repeated instructions and nested visual containers. */
-#start .cloud-deploy{gap:0 36px}
-#start .cloud-deploy .cloud-offer{margin:18px 0 4px}
-#start .cloud-deploy .cloud-offer p{font-size:15px;line-height:1.8}
-#start .cloud-deploy .cloud-billing summary{font-size:12px}
-#start .cloud-deploy #nr-add{margin-top:16px}
-#start .cloud-deploy .model-required{border:0;border-top:1px solid #e1d7eb;background:transparent;border-radius:0;padding:16px 0 0;margin-top:20px}
-#start .model-required p{margin:0;font-size:14px;line-height:1.8}
-#start .model-required strong{font-weight:600;color:#594078}
-#start .model-required span{display:inline-block;color:#807488;font-size:12px;margin-left:10px}
-
-#start .cloud-deploy .model-required{border-top:1px solid #d8c9e8;border-left:3px solid #8062a6;padding:14px 0 0 16px}
-#start .model-required .model-required-title{display:block;font-size:19px;font-weight:700;color:#593b7e;margin:0 0 7px}
-#start .model-required p{font-size:14px;color:#655570;margin:0 0 4px}
-#start .model-required .model-fee-note{margin-left:0;font-size:12px;color:#807488}
-
-.download-heading{font-size:15px;font-weight:600;color:#51435f;margin:0 0 12px}.installer-list{display:grid;gap:10px}.installer-link{display:flex;justify-content:space-between;align-items:center;gap:16px;text-decoration:none;background:#f4eff9;border:1px solid #d8cbe8;border-radius:12px;padding:13px 17px;color:#533c77}.installer-link:hover{background:#eae1f4;border-color:#8d70b3}.installer-link:focus-visible{outline:3px solid #8062a6;outline-offset:3px}.installer-link b{display:block;font-size:16px}.installer-link small{display:block;margin-top:2px;font-size:12px;color:#766785}.installer-status{font-size:12px;line-height:1.7;color:#7c6c88;margin:10px 0}.installer-help{border:0}.installer-help summary{font-size:13px;color:#695386;padding:6px 0}.installer-help p,.installer-help a{font-size:13px;line-height:1.8}.local-next{border-top:1px solid #e6dfee;padding-top:18px}.local-next>b{font-size:15px;color:#58416f}.local-next p{font-size:13px;line-height:1.8;margin:8px 0 12px}.local-links{display:flex;gap:12px 24px;flex-wrap:wrap}.local-links a{font-size:13px;color:#63488c}.cloud-return-note{font-size:13px;color:#665573;margin:0 0 13px;line-height:1.8}#start .local-links .source-link{margin:0}.installer-link[aria-busy="true"]{opacity:.8}
-
-/* Compact deployment cards: primary choices first, help on demand. */
-#start.compact-deployment .deploy-grid{gap:20px}
-#start.compact-deployment .deployment-card{display:block;padding:26px 30px}
-#start.compact-deployment .card-heading{justify-content:flex-start;gap:12px}
-#start.compact-deployment .card-heading h2{margin:0;font-size:24px}
-#start.compact-deployment .mode-icon{width:23px;height:23px}
-#start.compact-deployment .deploy-summary{margin-top:6px}
-#start.compact-deployment .deploy-actions{margin-top:20px}
-#start.compact-deployment .installer-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-#start.compact-deployment .installer-link{padding:15px 18px}
-#start.compact-deployment .installer-status{margin:8px 0 0;font-size:12px}
+.device-hint{font-size:13px;text-align:left;margin:0 0 8px}
+.model-required{grid-column:1 / -1;padding:14px 0 0;margin-top:2px;border-top:1px solid #ded1eb}
+.model-required-title{display:block;font-size:17px;font-weight:700;color:#593b7e}
+.installer-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.installer-link{display:flex;justify-content:space-between;align-items:center;gap:16px;text-decoration:none;background:#faf8fc;border:1px solid #e1d9e9;border-radius:12px;padding:15px 18px;color:#665078}
+.installer-link:hover{background:#f1ebf7;border-color:#b29acb}
+.installer-link:focus-visible{outline:3px solid #8062a6;outline-offset:3px}
+.installer-link b{display:block;font-size:16px}
+.installer-link small{display:block;margin-top:2px;font-size:12px;color:#766785}
+.installer-link[aria-busy="true"]{opacity:.8}
+.installer-status{font-size:12px;line-height:1.7;color:#7c6c88;margin:8px 0 0}
 .compact-local-help{display:flex;align-items:start;gap:24px;margin-top:12px;position:relative;flex-wrap:wrap}
+.source-link{text-decoration:none}
 .compact-local-help>.source-link{font-size:13px;padding:6px 0}
 .compact-local-help>.local-help{flex:1;min-width:0}
-#start.compact-deployment details{border:0;margin:0}
-#start.compact-deployment summary{font-size:13px;color:#695386;padding:6px 0}
-#start.compact-deployment .help-content{padding-top:10px}
-#start.compact-deployment .help-content p{font-size:13px;margin:12px 0 8px}
-#start.compact-deployment .setup-steps{margin:0 0 12px;font-size:13px}
-#start.compact-deployment .cloud-deploy{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:12px 32px}
-#start.compact-deployment .cloud-deploy .deploy-heading{grid-column:1;grid-row:1}
-#start.compact-deployment .cloud-deploy .deploy-actions{grid-column:2;grid-row:1;margin:4px 0 0}
-#start.compact-deployment .cloud-offer{margin:12px 0 0}
-#start.compact-deployment .cloud-offer p{margin:0;font-size:14px}
-.cloud-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#start.compact-deployment .cloud-buttons button{margin:0;min-height:50px;padding:12px 14px;font-size:14px;white-space:nowrap}
-#start.compact-deployment .cloud-return-note{font-size:12px;margin:9px 0 0}
-.cloud-help-row{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:0 32px;align-items:start}
-#start.compact-deployment .cloud-help{grid-column:2;grid-row:1}
-#start.compact-deployment .cloud-billing{grid-column:1;grid-row:1}
-#start.compact-deployment .device-hint{text-align:left;margin:0 0 8px}
-#start.compact-deployment .model-required{margin-top:20px;padding:4px 0 4px 17px;background:transparent;border:0;border-left:3px solid #8062a6;border-radius:0}
-#start.compact-deployment .model-required-title{font-size:17px;margin-bottom:4px}
-#start.compact-deployment .model-required p{margin:0;font-size:13px}
-#start.compact-deployment .model-fee-note{font-size:13px;margin-left:6px}
+.setup-steps{margin:0 0 12px;padding-left:23px;color:#70647e;font-size:13px;line-height:1.85}
+.setup-steps li{padding:3px 0}
+.setup-steps li::marker{color:#81629f}
+.local-links{display:flex;gap:12px 24px;flex-wrap:wrap}
+.local-links a{font-size:13px;color:#63488c}
+.story-layout{grid-template-columns:1fr 1fr;gap:48px}
+.story-card{transform:none}
+.faq-section{grid-template-columns:1fr 1fr;gap:48px}
 @media(max-width:800px){
-#start.compact-deployment .deployment-card{padding:23px}
-#start.compact-deployment .installer-list{grid-template-columns:1fr;gap:9px}
-#start.compact-deployment .installer-link{padding:12px 15px}
-#start.compact-deployment .cloud-deploy{display:block}
-#start.compact-deployment .cloud-deploy .deploy-actions{margin-top:18px}
+.deployment-hero{text-align:left;padding:30px 0 18px}
+.deployment-hero h1{font-size:32px;line-height:1.5}
+.deployment-hero h1 em{display:block}
+.deployment-section{padding-bottom:36px}
+.deploy-grid{gap:20px}
+.deployment-card{padding:23px}
+.deploy-heading .deploy-summary{font-size:14px}
+.cloud-deploy{display:block}
+.cloud-deploy .deploy-actions{margin-top:18px}
+.cloud-buttons button{font-size:13px;padding:11px;gap:6px}
 .cloud-help-row{display:flex;flex-direction:column;gap:3px;margin-top:12px}
-#start.compact-deployment .cloud-buttons button{font-size:13px;padding:11px;gap:6px}
+.model-required{margin-top:14px}
+.installer-list{grid-template-columns:1fr;gap:9px}
+.installer-link{padding:12px 15px}
 .compact-local-help{gap:20px}
-#start.compact-deployment .model-fee-note{margin-left:0}
+.story-layout,.faq-section{grid-template-columns:1fr}
+.story-layout{gap:28px}
+.faq-section{gap:12px}
 }
-#start.compact-deployment .cloud-deploy #nr-add{margin-top:0}
+@media(max-width:380px){.cloud-buttons{grid-template-columns:1fr}}
 
 /* Feedback stays in one text line; platform cards keep their original appearance. */
 .installer-link[aria-disabled="true"]{cursor:wait}
-#start.compact-deployment .installer-status{min-height:3.4em;max-width:100%;text-align:left}
+#start.compact-deployment .installer-status{max-width:100%;text-align:left}
+.installer-status:empty{margin:0}
 
 /* A quiet, independent alternative below the three primary downloads. */
 .backup-download{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:12px;padding-top:12px;border-top:1px solid #eee8f3;font-size:13px}
@@ -132,12 +100,9 @@
 .skills-entry:hover{background:#f5f0fa;border-color:#c5b3d8}
 .skills-entry-icon{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;color:#947bad}
 .skills-entry-icon svg{width:24px;height:24px}
-.skills-entry-copy{display:flex;align-items:center;gap:17px;min-width:0}
-.skills-entry-copy strong{font-size:15px;font-weight:600;color:#665078}
-.skills-entry-copy>span{font-size:12px;color:#8a7f94;padding-left:17px;border-left:1px solid #e7dfed;line-height:1.5}
-.skills-entry-action{display:flex;align-items:center;gap:11px;margin-left:auto;font-size:12px;white-space:nowrap;color:#7b6096}
-.skills-entry-action>span{font-size:18px;font-weight:400;transition:transform .15s}
-.skills-entry:hover .skills-entry-action>span{transform:translateX(3px)}
+.skills-entry-copy{font-size:15px;font-weight:600;color:#665078}
+.skills-entry-action{margin-left:auto;font-size:18px;color:#7b6096;transition:transform .15s}
+.skills-entry:hover .skills-entry-action{transform:translateX(3px)}
 @media(max-width:800px){.skills-entry{width:calc(100% - 40px);max-width:650px;margin-top:0;margin-bottom:24px}}
-@media(max-width:600px){.skills-entry{padding:13px 17px;gap:10px;border-radius:11px}.skills-entry-icon{width:23px}.skills-entry-icon svg{width:22px;height:22px}.skills-entry-copy{align-items:flex-start;flex-direction:column;gap:2px}.skills-entry-copy strong{font-size:14px}.skills-entry-copy>span{font-size:11px;border:0;padding:0}.skills-entry-action{font-size:12px;gap:8px}}
+@media(max-width:600px){.skills-entry{padding:13px 17px;gap:10px;border-radius:11px}.skills-entry-icon{width:23px}.skills-entry-icon svg{width:22px;height:22px}.skills-entry-copy{font-size:14px}}
 @media(max-width:380px){.skills-entry{width:calc(100% - 28px);padding:13px 15px}.skills-entry-icon{display:none}}

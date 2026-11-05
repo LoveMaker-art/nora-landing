@@ -34,7 +34,6 @@
   card.querySelector('.code-box').hidden = false;
   const add = card.querySelector('#nr-add');
   add.disabled = false;
-  card.querySelector('.cloud-return-note').textContent = '首次使用：下载并登录，再回来添加。';
   add.addEventListener('click', () => {
     const status = card.querySelector('#nr-add-status');
     status.replaceChildren(document.createTextNode('未打开 ClawChat？请先安装，或 '));
