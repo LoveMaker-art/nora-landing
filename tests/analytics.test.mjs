@@ -51,9 +51,10 @@ test('offline deployment clicks queue and resume with the same IDs, without bloc
  const next=harness(store);await settle();assert.ok(next.sent.some(e=>e.event_id===queued.event_id&&e.action==='cloud-add'));
 });
 
-test('only the Quark entry is tagged; copying the code is not a download click',()=>{
+test('only the current Quark entry is tagged and it does not request a passcode',()=>{
  const html=readFileSync('index.html','utf8');
  assert.equal((html.match(/data-entry-action="netdisk-quark"/g)||[]).length,1);
- assert.match(html,/<a class="backup-download-link" data-entry-action="netdisk-quark" href="https:\/\/pan.quark.cn\/s\/11965450ac0d"/);
- assert.ok(!html.match(/<button[^>]*id="backup-copy"[^>]*data-entry-action/));
+ assert.match(html,/<a class="backup-download-link" data-entry-action="netdisk-quark" href="https:\/\/pan.quark\.cn\/s\/644e65328cdf"/);
+ assert.match(html,/<span class="backup-release">v2\.6\.5<\/span>/);
+ assert.doesNotMatch(html,/id="(?:backup-access-code|backup-copy)"/);
 });
