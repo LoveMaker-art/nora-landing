@@ -49,6 +49,6 @@
   if(target.closest('footer a[href="https://github.com/LoveMaker-art/noras-tavern"]'))track('link_click',{action:'source'});
  },true);
  const trackedDetails=[...root.querySelectorAll('.faq-list details')];
- const names=['faq-relationship','faq-next','faq-failure'];
+ const names=['faq-cost','faq-relationship','faq-next','faq-failure'];
  trackedDetails.forEach((node,i)=>node.addEventListener('toggle',()=>{if(node.open)track('help_open',{action:names[i]});}));
 })();

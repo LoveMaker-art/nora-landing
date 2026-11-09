@@ -10,7 +10,7 @@ const ALLOWED = {
  download_click: ['windows','mac-arm64','mac-x64'],
  download_ready: ['windows','mac-arm64','mac-x64'],
  download_failed: ['windows','mac-arm64','mac-x64'],
- help_open: ['installation','faq-relationship','faq-next','faq-failure'],
+ help_open: ['faq-cost','installation','faq-relationship','faq-next','faq-failure'],
  link_click: ['clawchat','clawchat-local','clawchat-cloud','cloud-add','netdisk-quark','pairing','install-guide','github-fallback','source'],
  installer_resolve: ['installers']
 };

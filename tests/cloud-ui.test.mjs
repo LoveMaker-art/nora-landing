@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
 const source = readFileSync('cloud.js', 'utf8');
-function harness(code, userAgent = 'Windows') {
+function harness(code, userAgent = 'Windows', onCopy = async () => {}) {
   const nodes = new Map();
   const node = selector => {
     if (!nodes.has(selector)) nodes.set(selector, {
@@ -15,12 +15,14 @@ function harness(code, userAgent = 'Windows') {
     return nodes.get(selector);
   };
   const location = {};
+  const card = {dataset: {agentCode: code}, querySelector: node};
   vm.runInNewContext(source, {
     document: {
-      querySelector: () => ({dataset: {agentCode: code}, querySelector: node}),
+      querySelector: () => card,
+      getElementById: id => (id === 'start' ? card : node('#' + id)),
       createTextNode: text => text, createElement: () => ({dataset:{}})
     },
-    navigator: {userAgent, maxTouchPoints: 0, clipboard: {writeText: async () => {}}},
+    navigator: {userAgent, maxTouchPoints: 0, clipboard: {writeText: onCopy}},
     window: {location}, encodeURIComponent
   });
   return {node, location};
@@ -36,15 +38,16 @@ test('unconfirmed cloud entry cannot open a stale agent; ClawChat download still
 
 test('app action, web fallback and copy use the same confirmed code', async () => {
   const code = 'test-12345678-abcdefgh';
-  const h = harness(code);
+  let copied = '';
+  const h = harness(code, 'Windows', async (text) => { copied = text; });
   assert.equal(h.node('#nr-add').disabled, false);
   h.node('#nr-add').listeners.click();
   assert.equal(h.location.href, 'clawchat://shared-agent?code=' + code);
   assert.equal(h.node('#nr-add-status').child.href, 'https://clawling.com/zh/nest/share/' + code);
   assert.equal(h.node('#nr-add-status').child.dataset.entryAction,'cloud-add');
   assert.equal(h.node('[data-cloud-share]').href, h.node('#nr-add-status').child.href);
-  assert.equal(h.node('[data-agent-code]').textContent, code);
   await h.node('[data-copy]').listeners.click();
+  assert.equal(copied, code);
   assert.equal(h.node('#copy-status').textContent, '添加码已复制。');
 });
 

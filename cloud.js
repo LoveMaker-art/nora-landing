@@ -1,7 +1,7 @@
 /* Cloud actions are the only install path. */
 (() => {
   'use strict';
-  const card = document.querySelector('.cloud-deploy');
+  const card = document.getElementById('start');
   if (!card) return;
   const code = card.dataset.agentCode;
   const ua = navigator.userAgent || '';
@@ -14,7 +14,8 @@
     windows: 'https://plugin.clawling.chat/windows/clawchat-latest-setup.exe',
     unknown: 'https://clawling.com/zh/chat/#get'
   };
-  card.querySelector('#device-hint').textContent = {
+  const deviceHint = document.getElementById('device-hint');
+  if (deviceHint) deviceHint.textContent = {
     android: '当前设备：Android', ios: '当前设备：iPhone / iPad',
     macos: '当前设备：Mac', windows: '当前设备：Windows', unknown: '请选择你的设备'
   }[platform];
@@ -34,9 +35,7 @@
   const share = 'https://clawling.com/zh/nest/share/' + encodeURIComponent(code);
   const shareLink = card.querySelector('[data-cloud-share]');
   shareLink.href = share;
-  shareLink.hidden = false;
   card.querySelector('[data-agent-code]').textContent = code;
-  card.querySelector('.code-box').hidden = false;
   const add = card.querySelector('#nr-add');
   add.disabled = false;
   add.addEventListener('click', () => {
@@ -58,6 +57,6 @@
   copy.addEventListener('click', async () => {
     const status = card.querySelector('#copy-status');
     try { await navigator.clipboard.writeText(code); status.textContent = '添加码已复制。'; }
-    catch { status.textContent = '请选中上方添加码，手动复制。'; }
+    catch { status.textContent = '请打开分享页查看添加码。'; }
   });
 })();
