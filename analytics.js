@@ -40,22 +40,15 @@
  }
  window.addEventListener('online',()=>{delay=1500;flush();});
  window.addEventListener('pageshow',()=>flush());
- window.addEventListener('nora:download-outcome',event=>{
-  const d=event.detail;if(!d||!['download_ready','download_failed'].includes(d.event)||!['windows','mac-arm64','mac-x64'].includes(d.platform))return;
-  track(d.event,{action:d.platform,platform:d.platform,result:d.result});
- });
  track('pageview'); // One per document load; anchor navigation is not a new view.
  window.addEventListener('pageshow',event=>{if(event.persisted)track('pageview');});
  root.addEventListener('click',event=>{
   const target=event.target instanceof Element?event.target:null;if(!target)return;
   const entry=target.closest('[data-entry-action]');
-  if(entry){if(!entry.disabled&&['clawchat-local','clawchat-cloud','cloud-add','netdisk-quark'].includes(entry.dataset.entryAction))track('link_click',{action:entry.dataset.entryAction});return;}
-  const installer=target.closest('[data-installer]');
-  if(installer){const platform=installer.dataset.installer;track('download_click',{action:platform,platform,result:'click'});return;}
-  const mappings=[['[data-local-im]','clawchat'],['[data-pairing]','pairing'],['.local-links a[href*="docs/install-nora-tavern.md"]','install-guide'],['#installer-release','github-fallback'],['.source-link, footer a[href="https://github.com/LoveMaker-art/noras-tavern"]','source']];
-  for(const [selector,action] of mappings)if(target.closest(selector)){track('link_click',{action});break;}
+  if(entry){if(!entry.disabled&&['clawchat-cloud','cloud-add'].includes(entry.dataset.entryAction))track('link_click',{action:entry.dataset.entryAction});return;}
+  if(target.closest('footer a[href="https://github.com/LoveMaker-art/noras-tavern"]'))track('link_click',{action:'source'});
  },true);
- const trackedDetails=[...root.querySelectorAll('.local-help, .faq-list details')];
- const names=['installation','faq-relationship','faq-next','faq-failure'];
+ const trackedDetails=[...root.querySelectorAll('.faq-list details')];
+ const names=['faq-relationship','faq-next','faq-failure'];
  trackedDetails.forEach((node,i)=>node.addEventListener('toggle',()=>{if(node.open)track('help_open',{action:names[i]});}));
 })();

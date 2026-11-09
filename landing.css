@@ -3,12 +3,13 @@
 /* Local and cloud cost comparison */
 .hero{align-items:start;gap:55px}.hero-copy{padding-top:48px}.hero h1{font-size:clamp(34px,3.8vw,52px)}.local-entry{padding:18px 0 22px;border-bottom:1px solid #e6dfee}.local-entry p,.cloud-entry-heading p{font-size:14px;margin:8px 0 14px}.launcher-link{text-decoration:none}.local-platforms{font-size:12px!important;text-align:center;margin:8px 0!important}.guide-link{font-size:13px;display:block;text-align:center}.cloud-entry-heading{padding-top:21px}.cloud-entry-heading h3{font-size:17px}.costs-section{padding-top:10px;padding-bottom:64px;scroll-margin-top:24px}.costs-heading{text-align:center;margin-bottom:28px}.costs-heading h2{margin:10px 0}.cost-options{display:grid;grid-template-columns:1fr 1fr;gap:22px}.cost-option{border:1px solid #ded5e9;background:#fff;border-radius:18px;padding:28px}.cloud-option{background:#f3eff8}.mode-label{display:inline-block;color:#695386;font-size:13px;margin-bottom:12px}.cost-option h3{font-size:23px}.cost-highlight{font-size:17px;color:#624792;font-weight:600;margin:10px 0 22px}.cost-option dl{margin:0 0 18px}.cost-option dl>div{display:grid;grid-template-columns:80px 1fr;gap:16px;border-top:1px solid #e9e2ee;padding:14px 0;font-size:14px}.cost-option dt{font-weight:600;color:#4f445e}.cost-option dd{margin:0;color:#746a7e}.cost-option>a{font-size:14px}.cost-footnote{font-size:13px;text-align:center;margin:20px 0 0}.top nav{gap:22px}@media(max-width:800px){.hero-copy{padding-top:0}.hero{gap:26px}.cost-options{grid-template-columns:1fr}.costs-section{padding-bottom:40px}.costs-heading{text-align:left}.costs-heading h2{font-size:26px}.cost-option{padding:23px}.top nav{gap:12px}.top nav a{font-size:12px}.brand{gap:7px;font-size:19px}.brand img{width:30px;height:30px}.cost-option dl>div{grid-template-columns:70px 1fr;gap:12px}}
 
-/* Deployment choices: cloud recommendation first, local downloads stay visible. */
-.deployment-hero{text-align:center;padding:42px 0 28px}
+/* Cloud only: a numbered three-step flow from ClawChat install to model setup. */
+.deployment-hero{text-align:center;padding:42px 0 20px}
 .deployment-hero h1{font-size:clamp(30px,3.5vw,45px);letter-spacing:-1px;margin:14px 0}
 .deployment-hero h1 em{white-space:normal}
+.hero-sub{max-width:560px;margin:0 auto;font-size:15px;line-height:1.9;color:#665d75}
 .deployment-section{padding-bottom:54px}
-.deploy-grid{display:grid;grid-template-columns:1fr;gap:24px}
+.deploy-grid{display:grid;grid-template-columns:1fr;gap:24px;max-width:820px;margin:0 auto}
 .deployment-card{display:block;min-width:0;padding:26px 30px;border-radius:18px}
 .deployment-card .card-heading{justify-content:flex-start;gap:12px;flex-wrap:wrap}
 .deployment-card .card-heading h2{margin:0;font-size:24px}
@@ -16,16 +17,22 @@
 .deploy-heading .deploy-summary{font-size:15px;line-height:1.8;margin:6px 0 0}
 .deploy-actions{min-width:0;margin-top:20px}
 #cost{scroll-margin-top:24px}
-.cloud-deploy{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 32px;background:#f3edf8;border-color:#c5b3db;box-shadow:0 12px 36px #67508a0b;align-items:start}
-.cloud-deploy .deploy-heading{grid-column:1;grid-row:1}
-.cloud-deploy .deploy-actions{grid-column:2;grid-row:1;margin:4px 0 0}
-.recommend-badge{display:inline-flex;align-items:center;padding:2px 10px;border:1px solid #d4c3e7;border-radius:999px;background:#e7ddf2;color:#604583;font-size:12px;font-weight:600;line-height:1.7}
+.cloud-deploy{display:block;background:#f3edf8;border-color:#c5b3db;box-shadow:0 12px 36px #67508a0b}
 .cloud-offer{margin-top:12px}
 .cloud-offer p{margin:0;font-size:14px;line-height:1.8}
-.cloud-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.cloud-buttons button{min-height:52px;margin:0;padding:12px 14px;font-size:14px;white-space:nowrap}
-.cloud-return-note{font-size:12px;color:#665573;margin:0 0 10px;line-height:1.8}
-.cloud-help-row{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:0 32px;align-items:start}
+.cloud-steps{list-style:none;margin:0;padding:0;display:grid;gap:18px}
+.cloud-step{display:flex;gap:14px;align-items:flex-start}
+.step-num{display:grid;place-items:center;width:26px;height:26px;flex-shrink:0;border-radius:50%;background:#e2d5f0;color:#5c4182;font-size:13px;font-weight:700;line-height:1;margin-top:2px}
+.step-body{flex:1;min-width:0}
+.step-body h3{font-size:16px;margin:0 0 4px}
+.step-hint{font-size:12px;color:#665573;margin:0 0 10px;line-height:1.8}
+.cloud-step button{width:100%;min-height:52px;margin:0;padding:12px 14px;font-size:14px;white-space:nowrap}
+.cloud-step .status{margin-top:8px;font-size:12px;color:#665573;line-height:1.8}
+.cloud-fallback{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin-top:16px;padding-top:14px;border-top:1px solid #e2d6ee;font-size:13px;color:#665573}
+.cloud-fallback .code-box{margin-top:0;padding:6px 8px 6px 12px;gap:8px}
+.cloud-fallback .copy{min-height:34px;padding:5px 12px}
+.fallback-status{flex-basis:100%;font-size:12px;color:#7c6c88}
+.cloud-help-row{display:grid;grid-template-columns:1fr 1fr;gap:0 32px;align-items:start;margin-top:20px}
 .cloud-help{grid-column:2;grid-row:1}
 .cloud-billing{grid-column:1;grid-row:1}
 .compact-deployment details{border:0;margin:0}
@@ -34,75 +41,30 @@
 .compact-deployment .help-content p{font-size:13px;margin:12px 0 8px}
 .cloud-billing p{font-size:13px;line-height:1.8}
 .device-hint{font-size:13px;text-align:left;margin:0 0 8px}
-.model-required{grid-column:1 / -1;padding:14px 0 0;margin-top:2px;border-top:1px solid #ded1eb}
-.model-required-title{display:block;font-size:17px;font-weight:700;color:#593b7e}
-.installer-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-.installer-link{display:flex;justify-content:space-between;align-items:center;gap:16px;text-decoration:none;background:#faf8fc;border:1px solid #e1d9e9;border-radius:12px;padding:15px 18px;color:#665078}
-.installer-link:hover{background:#f1ebf7;border-color:#b29acb}
-.installer-link:focus-visible{outline:3px solid #8062a6;outline-offset:3px}
-.installer-link b{display:block;font-size:16px}
-.installer-link small{display:block;margin-top:2px;font-size:12px;color:#766785}
-.installer-link[aria-busy="true"]{opacity:.8}
-.installer-status{font-size:12px;line-height:1.7;color:#7c6c88;margin:8px 0 0}
-.compact-local-help{display:flex;align-items:start;gap:24px;margin-top:12px;position:relative;flex-wrap:wrap}
-.source-link{text-decoration:none}
-.compact-local-help>.source-link{font-size:13px;padding:6px 0}
-.compact-local-help>.local-help{flex:1;min-width:0}
-.setup-steps{margin:0 0 12px;padding-left:23px;color:#70647e;font-size:13px;line-height:1.85}
-.setup-steps li{padding:3px 0}
-.setup-steps li::marker{color:#81629f}
-.local-links{display:flex;gap:12px 24px;flex-wrap:wrap}
-.local-links a{font-size:13px;color:#63488c}
+.model-required{display:flex;align-items:flex-start;padding:14px 0 0;margin-top:18px;border-top:1px solid #ded1eb}
+.model-required-title{display:block;font-size:13px;font-weight:500;color:#6f6480;line-height:1.8}
 .story-layout{grid-template-columns:1fr 1fr;gap:48px}
 .story-card{transform:none}
 .faq-section{grid-template-columns:1fr 1fr;gap:48px}
 @media(max-width:800px){
-.deployment-hero{text-align:left;padding:30px 0 18px}
+.deployment-hero{text-align:left;padding:30px 0 14px}
 .deployment-hero h1{font-size:32px;line-height:1.5}
 .deployment-hero h1 em{display:block}
+.hero-sub{margin:0;font-size:14px}
 .deployment-section{padding-bottom:36px}
 .deploy-grid{gap:20px}
 .deployment-card{padding:23px}
 .deploy-heading .deploy-summary{font-size:14px}
-.cloud-deploy{display:block}
-.cloud-deploy .deploy-actions{margin-top:18px}
-.cloud-buttons button{font-size:13px;padding:11px;gap:6px}
-.cloud-help-row{display:flex;flex-direction:column;gap:3px;margin-top:12px}
-.model-required{margin-top:14px}
-.installer-list{grid-template-columns:1fr;gap:9px}
-.installer-link{padding:12px 15px}
-.compact-local-help{gap:20px}
+.cloud-step button{font-size:13px;padding:11px;gap:6px}
+.cloud-help-row{display:flex;flex-direction:column;gap:3px;margin-top:16px}
+.model-required{margin-top:16px}
 .story-layout,.faq-section{grid-template-columns:1fr}
 .story-layout{gap:28px}
 .faq-section{gap:12px}
 }
-@media(max-width:380px){.cloud-buttons{grid-template-columns:1fr}}
+@media(max-width:380px){.cloud-step{gap:10px}.step-num{width:23px;height:23px;font-size:12px}}
 
-/* Feedback stays in one text line; platform cards keep their original appearance. */
-.installer-link[aria-disabled="true"]{cursor:wait}
-#start.compact-deployment .installer-status{max-width:100%;text-align:left}
-.installer-status:empty{margin:0}
-
-/* A quiet, independent alternative below the three primary downloads. */
-.backup-download{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin-top:12px;padding-top:12px;border-top:1px solid #eee8f3;font-size:13px}
-.backup-download-link{display:inline-flex;align-items:center;gap:7px;color:#685183;text-decoration:none;font-weight:500;min-height:36px}
-.backup-download-link svg{width:18px;height:18px;flex-shrink:0}
-.backup-download-link:hover{color:#493369;text-decoration:underline}
-.backup-release{font-size:12px;color:#81758b}
-.backup-access{display:flex;align-items:center;gap:9px;margin-left:auto;color:#81758b;min-height:36px}
-.backup-access code{color:#51405f;font-size:13px;letter-spacing:.5px;user-select:all}
-.backup-copy{min-width:60px;min-height:36px;padding:4px 11px;border:1px solid #dfd5e9;border-radius:7px;background:#fff;color:#6a5189;font-size:12px;line-height:1.5}
-.backup-copy:hover{background:#f6f2fa;border-color:#b4a0cc}
-@media(max-width:480px){.backup-download{column-gap:10px;row-gap:2px}.backup-access{margin-left:0;flex-basis:100%;justify-content:flex-start}.backup-copy{min-height:40px}}
-
-/* Skill library: a quiet extension of the introduction. */
-.skills-entry{width:min(650px,calc(100% - 64px));display:flex;align-items:center;gap:14px;margin:-12px auto 30px;padding:14px 19px;border:1px solid #e5deeb;border-radius:12px;background:#fdfbfe;text-decoration:none;transition:background .15s,border-color .15s}
-.skills-entry:hover{background:#f5f0fa;border-color:#c5b3d8}
-.skills-entry-icon{display:grid;place-items:center;width:30px;height:30px;flex-shrink:0;color:#947bad}
-.skills-entry-icon svg{width:24px;height:24px}
-.skills-entry-copy{font-size:15px;font-weight:600;color:#665078}
-.skills-entry-action{margin-left:auto;font-size:18px;color:#7b6096;transition:transform .15s}
-.skills-entry:hover .skills-entry-action{transform:translateX(3px)}
-@media(max-width:800px){.skills-entry{width:calc(100% - 40px);max-width:650px;margin-top:0;margin-bottom:24px}}
-@media(max-width:600px){.skills-entry{padding:13px 17px;gap:10px;border-radius:11px}.skills-entry-icon{width:23px}.skills-entry-icon svg{width:22px;height:22px}.skills-entry-copy{font-size:14px}}
-@media(max-width:380px){.skills-entry{width:calc(100% - 28px);padding:13px 15px}.skills-entry-icon{display:none}}
+.footer-links{display:flex;gap:24px;align-items:center}
+@media(max-width:800px){.footer-links{gap:16px}}
+@media(max-width:600px){.footer-links{flex-direction:column;align-items:flex-start;gap:10px}}
+@media(max-width:380px){.footer-links{gap:8px}}

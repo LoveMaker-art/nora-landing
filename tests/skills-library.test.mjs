@@ -42,7 +42,7 @@ test('the existing five project skills remain, and supported environments stay e
 test('homepage entries and all secondary-page assets resolve inside production dist',async()=>{
  const home=await readFile('dist/index.html','utf8');
  assert.equal((home.match(/href="skills\/"/g)||[]).length,2);
- assert.equal((home.match(/data-installer=/g)||[]).length,3);
+ assert.equal((home.match(/data-installer=/g)||[]).length,0);
  const html=await readFile('dist/skills/index.html','utf8');
  assert.ok(!html.includes('skills-prototype'));assert.ok(!html.includes('noindex'));assert.ok(!html.includes('设计预览'));
  assert.ok(!html.includes('预览版'));

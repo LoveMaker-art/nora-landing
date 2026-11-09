@@ -1,4 +1,4 @@
-/* Cloud actions are independent of local installer downloads. */
+/* Cloud actions are the only install path. */
 (() => {
   'use strict';
   const card = document.querySelector('.cloud-deploy');
@@ -18,14 +18,19 @@
     android: '当前设备：Android', ios: '当前设备：iPhone / iPad',
     macos: '当前设备：Mac', windows: '当前设备：Windows', unknown: '请选择你的设备'
   }[platform];
+  const confirmed = /^[a-z0-9]{4}-[a-z0-9]{8}-[a-z0-9]{8}$/i.test(code || '');
   card.querySelector('#nr-download').addEventListener('click', () => {
     const status = card.querySelector('#nr-download-status');
-    status.textContent = '安装并登录后，请返回本页添加诺拉。其他平台可在下方帮助中选择。';
     status.hidden = false;
+    if (confirmed) {
+      status.textContent = '已为你复制添加码，安装 ClawChat 后直接粘贴即可添加诺拉。';
+      try { navigator.clipboard.writeText(code); } catch {}
+    } else {
+      status.textContent = '安装并登录后，请返回本页添加诺拉。其他平台可在下方帮助中选择。';
+    }
     window.location.href = downloads[platform];
   });
-  // No stale default: an unconfirmed entry cannot launch the old agent.
-  if (!/^[a-z0-9]{4}-[a-z0-9]{8}-[a-z0-9]{8}$/i.test(code || '')) return;
+  if (!confirmed) return;
   const share = 'https://clawling.com/zh/nest/share/' + encodeURIComponent(code);
   const shareLink = card.querySelector('[data-cloud-share]');
   shareLink.href = share;

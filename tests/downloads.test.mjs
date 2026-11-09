@@ -16,8 +16,9 @@ function database(){
 function put(env,platform='windows',age=1000){const a=seed[platform];env.sql.prepare('INSERT INTO installer_links VALUES(?,?,?,?)').run(platform,a.url,a.published,NOW-age);return a.url;}
 function release(tag='v2.5.3',platform='windows') {const suffix={windows:'win-x64-setup.exe','mac-arm64':'mac-arm64.dmg','mac-x64':'mac-x64.dmg'}[platform];const name=`Nora-Tavern-Launcher-1.2.0-${suffix}`;return {tag_name:tag,published_at:'2026-10-16T00:00:00Z',assets:[{name,state:'uploaded',size:100,browser_download_url:`https://github.com/LoveMaker-art/noras-tavern/releases/download/${tag}/${name}`}]};}
 const req=(q='')=>new Request('https://noratavern.com/api/download/windows'+q,{headers:{Origin:'https://lovemaker-art.github.io'}});
-test('initial button targets remain usable without waiting for browser JS',()=>{
- const html=readFileSync('index.html','utf8');for(const p of Object.keys(seed))assert.ok(html.includes(`data-installer="${p}" href="https://noratavern.com/api/download/${p}"`));
+test('landing page no longer exposes local installer buttons',()=>{
+ const html=readFileSync('index.html','utf8');
+ assert.ok(!html.includes('data-installer='));
  assert.ok(!html.includes('id="installer-retry"'));assert.ok(!html.includes('GitHub 备用下载入口'));
 });
 test('fresh cached address responds immediately without GitHub request',async()=>{

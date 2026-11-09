@@ -19,10 +19,9 @@ test('offline queue survives reload with same event IDs and occurrence timestamp
  const first=a.sent[0];assert.ok(store.has('nora_event_v2_'+first.event_id));
  const b=harness(store);await settle();assert.ok(b.sent.some(e=>e.event_id===first.event_id&&e.occurred_at===first.occurred_at));assert.equal([...store.keys()].filter(k=>k.startsWith('nora_event_v2_')).length,0);
 });
-test('rate limiting retains event and retries same ID; outcome uses platform',async()=>{
+test('rate limiting retains event and retries same ID',async()=>{
  let limited=true;const h=harness(new Map(),async()=>({status:limited?429:202}));await settle();const id=h.sent[0].event_id;
  limited=false;h.timers.shift()();await settle();assert.equal(h.sent[1].event_id,id);
- h.emit('nora:download-outcome',{event:'download_ready',platform:'windows',result:'ready'});await settle();assert.equal(h.sent.at(-1).event,'download_ready');assert.equal(h.sent.at(-1).action,'windows');
 });
 test('permanent rejection removed and unavailable storage does not prevent reporting',async()=>{
  const h=harness(new Map(),async()=>({status:400}));await settle();assert.equal([...h.store.keys()].filter(k=>k.startsWith('nora_event_v2_')).length,0);
@@ -36,13 +35,13 @@ test('obsolete resolver events no longer create telemetry',async()=>{
 
 test('one tagged click emits one correctly scoped event and disabled entries emit none',async()=>{
  const h=harness();await settle();
- for(const action of ['clawchat-local','clawchat-cloud','cloud-add','netdisk-quark']){const n=h.sent.length;h.click(action);await settle();assert.equal(h.sent.length,n+1);assert.equal(h.sent.at(-1).action,action);assert.equal(h.sent.at(-1).event,'link_click');}
+ for(const action of ['clawchat-cloud','cloud-add']){const n=h.sent.length;h.click(action);await settle();assert.equal(h.sent.length,n+1);assert.equal(h.sent.at(-1).action,action);assert.equal(h.sent.at(-1).event,'link_click');}
  const n=h.sent.length;h.click('cloud-add',true);h.click('unknown');await settle();assert.equal(h.sent.length,n);
 });
-test('all static download and adding routes carry an explicit scope',()=>{
+test('all static adding routes carry an explicit scope',()=>{
  const html=readFileSync('index.html','utf8');
  assert.equal((html.match(/data-entry-action="clawchat-cloud"/g)||[]).length,7);
- assert.equal((html.match(/data-entry-action="clawchat-local"/g)||[]).length,1);
+ assert.equal((html.match(/data-entry-action="clawchat-local"/g)||[]).length,0);
  assert.equal((html.match(/data-entry-action="cloud-add"/g)||[]).length,2);
 });
 test('offline deployment clicks queue and resume with the same IDs, without blocking navigation',async()=>{
@@ -51,10 +50,8 @@ test('offline deployment clicks queue and resume with the same IDs, without bloc
  const next=harness(store);await settle();assert.ok(next.sent.some(e=>e.event_id===queued.event_id&&e.action==='cloud-add'));
 });
 
-test('only the current Quark entry is tagged and it does not request a passcode',()=>{
+test('local launcher routes are fully removed from the landing page',()=>{
  const html=readFileSync('index.html','utf8');
- assert.equal((html.match(/data-entry-action="netdisk-quark"/g)||[]).length,1);
- assert.match(html,/<a class="backup-download-link" data-entry-action="netdisk-quark" href="https:\/\/pan.quark\.cn\/s\/644e65328cdf"/);
- assert.match(html,/<span class="backup-release">v2\.6\.5<\/span>/);
- assert.doesNotMatch(html,/id="(?:backup-access-code|backup-copy)"/);
+ assert.doesNotMatch(html,/local-deploy|installer-link|backup-download|netdisk-quark|data-installer/);
+ assert.equal((html.match(/data-entry-action="netdisk-quark"/g)||[]).length,0);
 });
